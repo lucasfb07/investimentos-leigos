@@ -1,0 +1,1295 @@
+<meta charset="utf-8">
+<title>Painel de Triagem — Ações e FIIs</title>
+<style>
+/* Paleta: neutros quentes (areia/pedra) com verde-petróleo como cor de ação e
+   âmbar como secundária. Verde e vermelho ficam reservados a sinal de valor —
+   não são usados em decoração, para que "verde" sempre queira dizer algo. */
+:root{
+  --bg:#f7f5f2; --card:#fff; --ink:#1c1a17; --dim:#6b645c; --line:#e6e1da;
+  --accent:#0d6e6e; --accent2:#c2761b; --pos:#1f7a4d; --neg:#b3402f;
+  --warn:#8a5a12; --warnbg:#fdf4e3;
+  --r:12px; --sh:0 1px 2px rgba(28,26,23,.05), 0 2px 6px rgba(28,26,23,.05);
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#14130f; --card:#1e1c18; --ink:#efeae1; --dim:#a39a8c; --line:#2f2c26;
+  --accent:#48b3a8; --accent2:#e0a33f; --pos:#4fbf85; --neg:#e8705c;
+  --warn:#e0b45f; --warnbg:#2b2313;
+  --sh:0 1px 2px rgba(0,0,0,.45), 0 2px 10px rgba(0,0,0,.3);
+}}
+:root[data-theme=dark]{--bg:#14130f;--card:#1e1c18;--ink:#efeae1;--dim:#a39a8c;--line:#2f2c26;--accent:#48b3a8;--accent2:#e0a33f;--pos:#4fbf85;--neg:#e8705c;--warn:#e0b45f;--warnbg:#2b2313;--sh:0 1px 2px rgba(0,0,0,.45),0 2px 10px rgba(0,0,0,.3)}
+:root[data-theme=light]{--bg:#f7f5f2;--card:#fff;--ink:#1c1a17;--dim:#6b645c;--line:#e6e1da;--accent:#0d6e6e;--accent2:#c2761b;--pos:#1f7a4d;--neg:#b3402f;--warn:#8a5a12;--warnbg:#fdf4e3;--sh:0 1px 2px rgba(28,26,23,.05),0 2px 6px rgba(28,26,23,.05)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+.wrap{max-width:1220px;margin:0 auto;padding:0 18px 70px}
+/* Hero: dá identidade e separa "o que é isto" do painel em si. */
+.hero{margin:0 -18px 22px;padding:44px 18px 38px;
+  background:
+    radial-gradient(900px 380px at 15% -10%, color-mix(in srgb,var(--accent) 26%,transparent), transparent 60%),
+    radial-gradient(700px 340px at 88% 0%, color-mix(in srgb,var(--accent2) 22%,transparent), transparent 60%),
+    var(--card);
+  border-bottom:1px solid var(--line)}
+.hero-in{max-width:1220px;margin:0 auto}
+.eyebrow{font-size:11.5px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+h1{font-size:clamp(28px,4.4vw,44px);line-height:1.08;letter-spacing:-.02em;margin:0 0 12px;font-weight:800}
+h1 em{font-style:normal;background:linear-gradient(100deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.lede{font-size:16.5px;line-height:1.55;color:var(--dim);max-width:60ch;margin-bottom:16px}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:99px;border:1px solid var(--line);background:var(--card);color:var(--dim)}
+.chip b{color:var(--ink)}
+.sub{color:var(--dim);font-size:13px;margin-bottom:18px}
+/* Bloco "o que é isso" no topo de cada aba — o leitor pode nunca ter investido. */
+.expl{background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 7%,var(--card)),var(--card));
+  border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:var(--r);
+  padding:18px 22px;margin-bottom:16px;box-shadow:var(--sh)}
+.expl h2{font-size:17px;margin:0 0 8px;letter-spacing:-.01em}
+.expl p{margin:0 0 9px;font-size:14.5px;line-height:1.62;max-width:78ch}
+.expl p:last-child{margin-bottom:0}
+.expl .k{color:var(--accent);font-weight:700}
+/* Glossário: termo com pontilhado, definição no hover e no toque. */
+abbr[title]{text-decoration:underline dotted var(--dim);text-underline-offset:3px;cursor:help}
+th abbr[title]{text-decoration-color:var(--dim)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--sh)}
+.kpi{position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;inset:0 auto 0 0;width:3px;background:var(--accent);opacity:.85}
+.kpi{padding-left:21px}
+.tabs{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);
+  backdrop-filter:blur(10px);padding:10px 0;margin-bottom:16px;border-bottom:1px solid var(--line)}
+.tab{transition:all .16s;display:inline-flex;align-items:center;gap:7px}
+.tab:hover{color:var(--ink);border-color:var(--accent);transform:translateY(-1px)}
+.tab.on{background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 70%,var(--accent2)));
+  border-color:transparent;box-shadow:0 2px 10px color-mix(in srgb,var(--accent) 35%,transparent)}
+.tab.on:hover{color:#fff}
+.tab .ic{font-size:15px;line-height:1}
+thead th{position:sticky;top:52px;background:var(--card);z-index:2}
+.mini{font-size:11px;color:var(--dim);font-weight:400}
+.warn{background:var(--warnbg);border-color:var(--warn);color:var(--warn);font-size:13.5px;margin-bottom:16px}
+.warn>b:first-child{display:block;margin-bottom:4px;font-size:14px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px}
+.kpi .l{font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--dim)}
+.kpi .v{font-size:26px;font-weight:700;margin-top:2px}
+.kpi .n{font-size:12px;color:var(--dim)}
+.filters{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;margin-bottom:16px}
+.f{display:flex;flex-direction:column;gap:3px}
+.f label{font-size:11.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.4px}
+.f input,.f select{padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink);font-size:14px;min-width:120px}
+.tabs{display:flex;gap:6px;margin-bottom:14px}
+.tab{padding:8px 16px;border:1px solid var(--line);background:var(--card);color:var(--dim);border-radius:8px;cursor:pointer;font-size:14px;font-weight:600}
+.tab.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.grid2{display:grid;grid-template-columns:1.25fr 1fr;gap:14px;margin-bottom:16px}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+.ct{font-size:13px;font-weight:700;margin-bottom:2px}
+.cs{font-size:12px;color:var(--dim);margin-bottom:10px}
+svg{display:block;width:100%;height:auto;overflow:visible}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+th{text-align:right;padding:8px 9px;border-bottom:2px solid var(--line);color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.4px;cursor:pointer;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th:hover{color:var(--ink)}
+td{text-align:right;padding:8px 9px;border-bottom:1px solid var(--line);white-space:nowrap}
+tbody tr:hover{background:rgba(127,127,127,.07)}
+.tk{font-weight:700}
+.pos{color:var(--pos)} .neg{color:var(--neg)}
+.pill{display:inline-block;padding:1px 7px;border-radius:99px;font-size:11px;background:rgba(127,127,127,.14);color:var(--dim)}
+.top5{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:8px}
+.t5{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:var(--r);padding:13px 15px}
+.t5 .r{font-size:11px;color:var(--dim);font-weight:700}
+.t5{position:relative}
+.t5 .t{font-size:19px;font-weight:800;margin:1px 0 5px;line-height:1.2;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t5 .t.longo{font-size:14px}
+.t5:hover{border-color:var(--accent)}
+.t5 .mais:hover{text-decoration:underline}
+/* O detalhe FLUTUA sobre o conteúdo em vez de empurrar o layout. Card crescendo
+   reorganizava a grade inteira a cada clique. */
+.t5 .det{position:absolute;left:calc(100% + 10px);top:-1px;z-index:30;
+  width:300px;background:var(--card);border:1px solid var(--accent);
+  border-radius:var(--r);padding:14px 16px;
+  box-shadow:0 12px 34px rgba(0,0,0,.24),0 2px 8px rgba(0,0,0,.12)}
+/* Seta apontando para o card de origem. */
+.t5 .det::before{content:'';position:absolute;left:-7px;top:20px;width:12px;height:12px;
+  background:var(--card);border-left:1px solid var(--accent);border-bottom:1px solid var(--accent);
+  transform:rotate(45deg)}
+.t5.aberto{z-index:31}
+/* Nos dois últimos da linha não cabe à direita: abre para a esquerda. */
+.top5>.t5:last-child .det,.top5>.t5:nth-last-child(2) .det{left:auto;right:calc(100% + 10px)}
+.top5>.t5:last-child .det::before,.top5>.t5:nth-last-child(2) .det::before{
+  left:auto;right:-7px;transform:rotate(225deg)}
+/* Em tela estreita não há lateral: volta a abrir embaixo, ainda flutuando. */
+@media(max-width:820px){
+  .t5 .det,.top5>.t5:last-child .det,.top5>.t5:nth-last-child(2) .det{
+    left:0;right:auto;top:calc(100% - 4px);width:min(300px,92vw)}
+  .t5 .det::before{left:22px;top:-7px;right:auto;transform:rotate(135deg)}
+}
+.t5 .sc{font-size:12px;color:var(--accent);font-weight:700;margin-bottom:7px}
+.t5 dl{margin:0;font-size:11.5px;display:grid;grid-template-columns:auto auto;gap:1px 8px}
+.t5 dt{color:var(--dim)} .t5 dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+.wts{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;font-size:12px}
+.wts .f input{min-width:74px}
+details{margin-top:10px;font-size:12.5px;color:var(--dim)}
+summary{cursor:pointer;color:var(--accent);font-weight:600}
+footer{margin-top:26px;font-size:12.5px;color:var(--dim);border-top:1px solid var(--line);padding-top:14px}
+</style>
+
+<div class="hero"><div class="hero-in">
+  <div class="eyebrow">Dados públicos · CVM · Banco Central · B3</div>
+  <h1>Entenda o <em>porquê</em> antes<br>de olhar o preço.</h1>
+  <p class="lede">Um painel de triagem com dado oficial, sem opinião embutida. Cada número mostra de onde veio, e cada limitação está escrita — inclusive quando o dado simplesmente não existe.</p>
+  <div class="chips">
+    <span class="chip"><b>1.045</b> FIIs</span>
+    <span class="chip"><b>437</b> empresas</span>
+    <span class="chip"><b>16</b> títulos do Tesouro</span>
+    <span class="chip">atualizado <b>09/08/2026 17:27</b></span>
+  </div>
+</div></div>
+
+<div class="wrap">
+
+<div class="card warn">
+  <b>Isto é uma triagem mecânica, não uma lista de compra.</b>
+  Os filtros aplicam critérios numéricos sobre <b>um exercício passado</b>. Passar no filtro não diz nada sobre governança, setor, ciclo, concorrência ou qualidade do lucro — um lucro inflado por venda de ativo aparece igual a um lucro operacional recorrente. Bancos ficam fora: o plano de contas é incompatível com dívida/EBITDA.
+</div>
+
+<div class="tabs">
+  <button class="tab on" id="tab-a" onclick="setTab('a')"><span class="ic">📈</span>Ações</button>
+  <button class="tab" id="tab-f" onclick="setTab('f')"><span class="ic">🏢</span>FIIs</button>
+  <button class="tab" id="tab-r" onclick="setTab('r')"><span class="ic">🏦</span>Renda fixa</button>
+  <button class="tab" id="tab-u" onclick="setTab('u')"><span class="ic">🇺🇸</span>EUA</button>
+  <button class="tab" id="tab-d" onclick="setTab('d')"><span class="ic">📦</span>Fundos</button>
+  <button class="tab" id="tab-c" onclick="setTab('c')"><span class="ic">🧭</span>Minha carteira</button>
+</div>
+
+<!-- ============ EUA ============ -->
+<div id="pane-u" style="display:none">
+  <div class="expl">
+    <h2>🇺🇸 Ações americanas</h2>
+    <p>Uma <span class="k">watchlist</span>, não um screener — e a diferença tem motivo. A fonte gratuita de fundamentos permite 25 consultas por dia, uma por empresa: varrer as 500 do S&amp;P levaria vinte dias. Então o painel acompanha uma lista que <b>você</b> define, com os dados guardados por 30 dias.</p>
+    <p><b>O risco que não aparece na tabela é o câmbio.</b> Tudo aqui está em dólar. Se a ação subir 10% e o dólar cair 10%, seu retorno em reais é praticamente zero. Comprando lá fora você assume duas apostas ao mesmo tempo — a empresa e a moeda.</p>
+    <p><b>Não compare o P/VP daqui com o das brasileiras.</b> Empresa de tecnologia vale por marca, software e gente, que quase não aparecem no balanço — daí P/VP de 40 na Apple sem que isso signifique o mesmo que 40 numa indústria.</p>
+  </div>
+
+  <div class="kpis">
+    <div class="card kpi"><div class="l">Papéis na lista</div><div class="v" id="u1">—</div><div class="n" id="u1n"></div></div>
+    <div class="card kpi"><div class="l">Mediana L/P</div><div class="v" id="u2">—</div><div class="n">lucro ÷ preço</div></div>
+    <div class="card kpi"><div class="l">Mediana ROE</div><div class="v" id="u3">—</div><div class="n">retorno sobre patrimônio</div></div>
+    <div class="card kpi"><div class="l">Dólar hoje</div><div class="v" id="u4">—</div><div class="n">PTAX venda</div></div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="ct">Top 5 pelos critérios definidos — <span style="color:var(--dim);font-weight:400">não é ranking de qualidade</span></div>
+    <div class="cs">Eixos normalizados entre os papéis da sua watchlist — não entre todo o mercado americano.</div>
+    <div class="wts" style="margin-bottom:14px">
+      <div class="f"><label>Lucro/preço</label><input type="number" id="e1" value="30" step="5" oninput="renderU()"></div>
+      <div class="f"><label>ROE</label><input type="number" id="e2" value="25" step="5" oninput="renderU()"></div>
+      <div class="f"><label>Margem</label><input type="number" id="e3" value="20" step="5" oninput="renderU()"></div>
+      <div class="f"><label>Baixa oscilação</label><input type="number" id="e4" value="15" step="5" oninput="renderU()"></div>
+      <div class="f"><label>Dividendos</label><input type="number" id="e5" value="10" step="5" oninput="renderU()"></div>
+    </div>
+    <div class="top5" id="t5u"></div>
+    <details><summary>Três limites específicos desta lista</summary>
+      <b>O universo é o que você escolheu.</b> Ser primeiro entre 15 papéis que você mesmo selecionou não é ser bom no mercado americano — o recorte já embute a sua opinião prévia.<br><br>
+      <b>Nada aqui vê o câmbio.</b> O score é todo em dólar. Um papel no topo pode dar retorno negativo em reais se a moeda andar contra.<br><br>
+      <b>ROE e margem não são comparáveis entre setores.</b> Banco, varejo e software operam em faixas estruturalmente diferentes; o score trata todos na mesma régua, o que favorece setores de margem naturalmente alta.
+    </details>
+  </div>
+
+  <div class="card tw">
+    <div class="ct" style="margin-bottom:2px">Watchlist</div>
+    <div class="cs">Para incluir ou remover papéis: <code>watchlist-eua.ps1 -Add NVDA,AMD</code> ou <code>-Remove AMD</code>.</div>
+    <table id="tu"><thead><tr>
+      <th onclick="srt('u','t')">Ticker</th><th onclick="srt('u','p')">Preço USD</th>
+      <th onclick="srt('u','ey')"><abbr title="Lucro sobre preço: o inverso do P/L. Permite comparar com a aba de ações brasileiras na mesma régua.">L/P %</abbr></th>
+      <th onclick="srt('u','pl')">P/L</th>
+      <th onclick="srt('u','pvp')"><abbr title="Preço sobre valor patrimonial. Em tecnologia é naturalmente alto: marca e software não entram no balanço.">P/VP</abbr></th>
+      <th onclick="srt('u','roe')">ROE %</th><th onclick="srt('u','mg')">Margem %</th>
+      <th onclick="srt('u','dy')">DY %</th>
+      <th onclick="srt('u','be')"><abbr title="Beta mede quanto a ação oscila em relação ao mercado. Acima de 1 amplifica os movimentos; abaixo de 1 amortece.">Beta</abbr></th>
+      <th onclick="srt('u','ee')">EV/EBITDA</th>
+    </tr></thead><tbody></tbody></table>
+  </div>
+</div>
+
+<!-- ============ AÇÕES ============ -->
+<div id="pane-a">
+  <div class="expl">
+    <h2>📈 O que é uma ação</h2>
+    <p>Comprar uma ação é comprar <span class="k">um pedacinho de uma empresa</span>. Você vira sócio: se ela lucra e cresce, sua parte tende a valer mais e você pode receber parte desse lucro em dinheiro — os <abbr title="Parcela do lucro distribuída aos sócios em dinheiro. No Brasil, dividendo é isento de imposto de renda para pessoa física; JCP é tributado em 15% na fonte.">dividendos</abbr>. Se ela vai mal, sua parte vale menos. Não existe prazo nem taxa combinada: o retorno é o que a empresa conseguir entregar.</p>
+    <p>Esta aba filtra empresas por critérios que <b>você</b> define — quanto de lucro por real investido, quanta dívida aceita, quanto do lucro é distribuído. O <span class="k">preço-teto</span> responde a uma pergunta só: a que preço este lucro me daria o retorno que exijo? É conta sobre um ano passado, não previsão.</p>
+    <p><b>O risco em uma frase:</b> a empresa pode piorar, o setor pode virar, e o preço pode cair e demorar anos para voltar — ou não voltar. Não há garantia nenhuma.</p>
+  </div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="filters">
+      <div class="f"><label>Retorno exigido (L/P)</label><input type="number" id="req" value="12" min="4" max="40" step="1" oninput="render()"></div>
+      <div class="f"><label>Dívida líq/EBITDA máx</label><input type="number" id="mdiv" value="3" step="0.5" oninput="render()"></div>
+      <div class="f"><label>Payout máx %</label><input type="number" id="mpo" value="100" step="10" oninput="render()"></div>
+      <div class="f"><label>Anos com lucro mín</label><select id="mal" onchange="render()"><option value="0">0</option><option value="2">2</option><option value="3" selected>3</option></select></div>
+      <div class="f"><label>Setor</label><select id="sec" onchange="render()"><option value="">Todos</option></select></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="ct">Top 5 pelos critérios definidos — <span style="color:var(--dim);font-weight:400">não é ranking de qualidade</span></div>
+    <div class="cs">Cada eixo é normalizado de 0 a 1 entre as empresas aprovadas e somado com o peso abaixo. Mude os pesos e a ordem muda: é a sua régua, não um veredito.</div>
+    <div class="wts" style="margin-bottom:14px">
+      <div class="f"><label>Lucro/preço</label><input type="number" id="w1" value="30" step="5" oninput="render()"></div>
+      <div class="f"><label>ROE</label><input type="number" id="w2" value="20" step="5" oninput="render()"></div>
+      <div class="f"><label>Previsibilidade</label><input type="number" id="w3" value="20" step="5" oninput="render()"></div>
+      <div class="f"><label>Baixa dívida</label><input type="number" id="w4" value="20" step="5" oninput="render()"></div>
+      <div class="f"><label>Margem líquida</label><input type="number" id="w5" value="10" step="5" oninput="render()"></div>
+    </div>
+    <div class="top5" id="t5a"></div>
+    <details><summary>Por que este Top 5 não é uma lista de compra</summary>
+      O score só enxerga o que está na tabela. Ele não sabe se o lucro veio da operação ou de uma venda de ativo; não conhece o setor, o concorrente, o contrato que vence ano que vem nem quem controla a empresa. Duas empresas com score idêntico podem ter riscos opostos. Previsibilidade aqui é apenas <b>quantos dos 3 exercícios tiveram lucro positivo</b> — não mede estabilidade da margem nem do fluxo de caixa.
+    </details>
+  </div>
+
+  <div class="kpis">
+    <div class="card kpi"><div class="l">Passaram no filtro</div><div class="v" id="k1">—</div><div class="n" id="k1n"></div></div>
+    <div class="card kpi"><div class="l">Mediana L/P</div><div class="v" id="k2">—</div><div class="n">lucro ÷ valor de mercado</div></div>
+    <div class="card kpi"><div class="l">Mediana ROE</div><div class="v" id="k3">—</div><div class="n">retorno sobre patrimônio</div></div>
+    <div class="card kpi"><div class="l">Abaixo do teto</div><div class="v" id="k4">—</div><div class="n" id="k4n"></div></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="ct">Lucro/preço × retorno sobre patrimônio</div>
+      <div class="cs">Direita = mais lucro por real investido. Alto = empresa mais rentável. Bolha maior = lucro absoluto maior.</div>
+      <svg id="sc" viewBox="0 0 640 340" role="img" aria-label="Dispersão L/P contra ROE"></svg>
+    </div>
+    <div class="card">
+      <div class="ct">Distância até o preço-teto</div>
+      <div class="cs">Quanto o preço atual está abaixo (verde) ou acima (vermelho) do preço em que L/P igualaria o retorno exigido.</div>
+      <svg id="bar" viewBox="0 0 420 340" role="img" aria-label="Distância até o teto"></svg>
+    </div>
+  </div>
+
+  <div class="card tw">
+    <div class="ct" style="margin-bottom:10px">Detalhe — clique no cabeçalho para ordenar</div>
+    <table id="ta"><thead><tr>
+      <th onclick="srt('a','t')"><abbr title="Código do papel na bolsa. O número indica o tipo: 3 = ordinária (com voto), 4 = preferencial (sem voto, geralmente com prioridade em dividendos).">Ticker</abbr></th>
+      <th onclick="srt('a','p')">Preço</th>
+      <th onclick="srt('a','ey')"><abbr title="Lucro sobre preço: quanto de lucro a empresa gerou para cada real de valor de mercado. É o inverso do P/L. 10% significa que o lucro de um ano equivale a 10% do preço.">L/P %</abbr></th>
+      <th onclick="srt('a','tt')"><abbr title="Preço em que o L/P igualaria o retorno que você exigiu no filtro. Aritmética sobre o lucro de um ano passado — se o lucro cair, o teto cai junto.">Teto R$</abbr></th>
+      <th onclick="srt('a','dsc')"><abbr title="Distância entre o preço atual e o preço-teto. Positivo = negociando abaixo do teto pelos seus critérios.">Dist %</abbr></th>
+      <th onclick="srt('a','roe')"><abbr title="Return on Equity: lucro dividido pelo patrimônio dos sócios. Mede quanto a empresa gera de retorno com o capital que tem. ROE alto e sustentado costuma indicar bom negócio.">ROE %</abbr></th>
+      <th onclick="srt('a','ml')"><abbr title="Quanto sobra de lucro para cada R$ 100 de receita. Varia muito por setor: supermercado opera com margem baixa por natureza, software com margem alta.">Marg líq %</abbr></th>
+      <th onclick="srt('a','po')"><abbr title="Fatia do lucro distribuída aos sócios em dividendos e JCP. Acima de 100% significa pagar mais do que ganhou no ano, tirando de reservas.">Payout %</abbr></th>
+      <th onclick="srt('a','de')"><abbr title="Quantos anos de geração de caixa seriam necessários para quitar a dívida líquida. Negativo significa caixa maior que a dívida. Acima de 3 costuma exigir atenção — mas o normal varia por setor.">Dív/EBITDA</abbr></th>
+      <th onclick="srt('a','lu')">Lucro R$ bi</th>
+      <th onclick="srt('a','al')"><abbr title="Quantos dos 3 últimos exercícios tiveram lucro positivo. É uma medida grosseira de previsibilidade: não mede estabilidade da margem nem do caixa.">Anos+</abbr></th>
+    </tr></thead><tbody></tbody></table>
+  </div>
+</div>
+
+<!-- ============ FIIs ============ -->
+<div id="pane-f" style="display:none">
+  <div class="expl">
+    <h2>🏢 O que é um FII</h2>
+    <p>Um Fundo de Investimento Imobiliário junta o dinheiro de muita gente para investir em imóveis — e divide o resultado entre os cotistas, <span class="k">quase sempre todo mês</span>. Você compra cotas na bolsa como se fosse ação, mas em vez de ser sócio de uma empresa, você é dono de uma fatia de shoppings, galpões, lajes ou de dívidas imobiliárias. Para pessoa física, esse rendimento mensal costuma ser <b>isento de imposto de renda</b>.</p>
+    <p>Existem dois tipos, e eles se comportam de forma diferente: o de <span class="k">tijolo</span> tem imóveis de verdade e vive de aluguel — o risco é inquilino sair (<abbr title="Percentual do imóvel desocupado. Vacância física mede área vazia; vacância financeira mede a receita que deixou de entrar.">vacância</abbr>). O de <span class="k">papel</span> empresta dinheiro ao setor imobiliário via <abbr title="Certificado de Recebíveis Imobiliários: título de dívida lastreado em contratos imobiliários. Paga juros, geralmente atrelados ao CDI ou à inflação.">CRI</abbr> e vive de juros — o risco é calote e queda da taxa básica.</p>
+    <p><b>A armadilha mais comum:</b> escolher pelo <abbr title="Dividend Yield: rendimento distribuído nos últimos 12 meses dividido pelo preço da cota. É retrovisor, não promessa.">rendimento</abbr> mais alto. Rendimento alto costuma ser preço baixo — e o preço pode estar baixo por um bom motivo, como vacância ou inadimplência. Por isso a tabela mostra as duas coisas lado a lado.</p>
+  </div>
+  <div class="card warn">
+    <b>Vacância: de onde vem e onde ela falha.</b>
+    Sai do <b>Informe Trimestral</b> da CVM, imóvel a imóvel, ponderada por área. Dois cuidados: <b>"—" significa sem dado, não zero</b> — FII de papel não tem imóvel e parte dos fundos não preenche; e <b>20 fundos foram descartados</b> por preencherem o campo com taxa de ocupação em vez de vacância (shoppings reportando 98% de "vacância" enquanto geram receita normal). Qualidade e localização do imóvel continuam fora: um galpão AAA e um barracão entram iguais aqui.
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="filters">
+      <div class="f"><label>Tipo</label><select id="ftp" onchange="renderF()"><option value="">Todos</option><option>papel</option><option>tijolo</option><option>híbrido</option></select></div>
+      <div class="f"><label>P/VP máx</label><input type="number" id="fpvp" value="1.1" step="0.05" oninput="renderF()"></div>
+      <div class="f"><label>DY ano mín %</label><input type="number" id="fdy" value="0" step="1" oninput="renderF()"></div>
+      <div class="f"><label>Taxa adm máx %</label><input type="number" id="ftx" value="2" step="0.1" oninput="renderF()"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="ct">Top 5 pelos critérios definidos</div>
+    <div class="cs">Mesma lógica: eixos normalizados entre os fundos aprovados, somados com os pesos abaixo.</div>
+    <div class="wts" style="margin-bottom:14px">
+      <div class="f"><label>Rendimento</label><input type="number" id="v1" value="30" step="5" oninput="renderF()"></div>
+      <div class="f"><label>Desconto (P/VP)</label><input type="number" id="v2" value="25" step="5" oninput="renderF()"></div>
+      <div class="f"><label>Diversificação</label><input type="number" id="v3" value="20" step="5" oninput="renderF()"></div>
+      <div class="f"><label>Taxa baixa</label><input type="number" id="v4" value="15" step="5" oninput="renderF()"></div>
+      <div class="f"><label>Liquidez</label><input type="number" id="v5" value="10" step="5" oninput="renderF()"></div>
+    </div>
+    <div class="top5" id="t5f"></div>
+    <details><summary>O que falta neste score — leia antes de usar</summary>
+      <b>Vacância não entra, porque o dado não existe na base.</b> Num FII de tijolo isso é a variável central: um fundo com P/VP baixo e vacância de 30% pontuaria bem aqui e estaria em dificuldade real. Qualidade e localização do imóvel, perfil do inquilino e prazo de contrato também ficam de fora. "Diversificação" mede concentração por <b>classe de ativo</b> (CRI, imóvel, cotas), não por imóvel individual — um fundo com um único galpão gigante pode parecer diversificado. O rendimento é o do mês × 12, então um mês com receita extraordinária infla o score.
+    </details>
+  </div>
+
+  <div class="kpis">
+    <div class="card kpi"><div class="l">Fundos no filtro</div><div class="v" id="f1">—</div><div class="n" id="f1n"></div></div>
+    <div class="card kpi"><div class="l">Mediana P/VP</div><div class="v" id="f2">—</div><div class="n">preço ÷ valor patrimonial</div></div>
+    <div class="card kpi"><div class="l">Mediana DY</div><div class="v" id="f3">—</div><div class="n">mês anualizado ×12</div></div>
+    <div class="card kpi"><div class="l">Mediana taxa</div><div class="v" id="f4">—</div><div class="n">administração ao ano</div></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="ct">P/VP × rendimento anualizado</div>
+      <div class="cs">Esquerda = desconto sobre o patrimônio. Alto = distribui mais. Bolha = patrimônio do fundo.</div>
+      <svg id="fsc" viewBox="0 0 640 340" role="img" aria-label="Dispersão P/VP contra DY"></svg>
+    </div>
+    <div class="card">
+      <div class="ct">Concentração por classe de ativo</div>
+      <div class="cs">Índice de Herfindahl: 0,25 = bem distribuído entre CRI, imóvel e cotas. 1,00 = tudo numa classe só.</div>
+      <svg id="fbar" viewBox="0 0 420 340" role="img" aria-label="Concentração por fundo"></svg>
+    </div>
+  </div>
+
+  <div class="card tw">
+    <div class="ct" style="margin-bottom:10px">Detalhe</div>
+    <table id="tf"><thead><tr>
+      <th onclick="srt('f','t')">Ticker</th>
+      <th onclick="srt('f','tp')"><abbr title="Papel = empresta ao setor imobiliário e vive de juros. Tijolo = tem imóveis e vive de aluguel. Híbrido = mistura os dois.">Tipo</abbr></th>
+      <th onclick="srt('f','p')">Preço</th>
+      <th onclick="srt('f','vp')"><abbr title="Valor patrimonial por cota: o patrimônio do fundo dividido pelo número de cotas. É quanto de patrimônio cada cota representa segundo a contabilidade.">VP/cota</abbr></th>
+      <th onclick="srt('f','pvp')"><abbr title="Preço dividido pelo valor patrimonial. Abaixo de 1 você paga menos que o valor de livro; acima de 1, paga ágio. Desconto pode ser oportunidade — ou aviso de problema.">P/VP</abbr></th>
+      <th onclick="srt('f','dy')"><abbr title="Dividend Yield anualizado: rendimento do mês multiplicado por 12, sobre o preço. Supõe repetição — um mês com receita extraordinária infla o número.">DY ano %</abbr></th>
+      <th onclick="srt('f','tx')"><abbr title="Taxa de administração ao ano, como percentual do patrimônio. Sai do seu bolso todo mês, independentemente de o fundo ir bem ou mal.">Taxa %</abbr></th>
+      <th onclick="srt('f','vac')"><abbr title="Percentual de área desocupada, ponderado por metro quadrado (Informe Trimestral da CVM). Traço significa SEM DADO, não zero: FII de papel não tem imóvel.">Vacância %</abbr></th>
+      <th onclick="srt('f','ci')"><abbr title="Fatia da receita do fundo que vem do maior imóvel. Acima de 60% significa que a saída de um inquilino compromete boa parte da distribuição.">Maior imóvel</abbr></th>
+      <th onclick="srt('f','ni')">Imóveis</th>
+      <th onclick="srt('f','pl')"><abbr title="Patrimônio líquido do fundo. Fundo maior costuma ter mais liquidez, o que facilita comprar e vender sem mexer no preço.">PL R$ bi</abbr></th>
+      <th onclick="srt('f','ct')"><abbr title="Número de cotistas. Serve de proxy de liquidez: muitos cotistas geralmente significa negociação diária suficiente para sair sem derrubar o preço.">Cotistas</abbr></th>
+    </tr></thead><tbody></tbody></table>
+  </div>
+</div>
+
+<!-- ============ RENDA FIXA ============ -->
+<div id="pane-r" style="display:none">
+  <div class="expl">
+    <h2>🏦 O que é renda fixa</h2>
+    <p>Em renda fixa você <span class="k">empresta dinheiro</span> — para um banco (CDB, LCI, LCA), para o governo (Tesouro Direto) ou para uma empresa (debênture, CRI, CRA) — e recebe de volta com juros. A regra de remuneração é combinada na hora da compra. "Fixa" quer dizer <b>regra conhecida</b>, não valor garantido: se você vender antes do vencimento, pode receber mais ou menos que o combinado.</p>
+    <p>Três formatos: <span class="k">pós-fixado</span> acompanha o <abbr title="Certificado de Depósito Interbancário: taxa de referência que anda praticamente colada na Selic. É a régua padrão da renda fixa brasileira.">CDI</abbr> — sobe quando o juro sobe. <span class="k">Prefixado</span> trava uma taxa hoje — bom se o juro cair, ruim se subir. <span class="k">IPCA+</span> paga a inflação mais uma taxa, protegendo o poder de compra.</p>
+    <p><b>Taxa mais alta nunca é presente.</b> Ela é o preço de algum risco: emissor menos sólido, prazo mais longo ou dinheiro preso. O simulador abaixo mostra qual dos três você está aceitando, e o <abbr title="Fundo Garantidor de Créditos: cobre CDB, LCI, LCA e poupança até R$ 250 mil por CPF e por conglomerado, com teto global de R$ 1 milhão a cada 4 anos.">FGC</abbr> só cobre parte deles.</p>
+  </div>
+  <div class="kpis">
+    <div class="card kpi"><div class="l">CDI ao ano</div><div class="v" id="r-cdi">—</div><div class="n" id="r-cdi-d"></div></div>
+    <div class="card kpi"><div class="l">Selic meta</div><div class="v" id="r-selic">—</div><div class="n" id="r-selic-d"></div></div>
+    <div class="card kpi"><div class="l">IPCA 12 meses</div><div class="v" id="r-ipca">—</div><div class="n" id="r-ipca-d"></div></div>
+    <div class="card kpi"><div class="l">Dólar PTAX</div><div class="v" id="r-dolar">—</div><div class="n" id="r-dolar-d"></div></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="ct">Simulador — vale a pena essa oferta?</div>
+      <div class="cs">Não existe fonte pública de taxa de CDB, LCI ou LCA: são negociadas por banco e por cliente. Informe a oferta que você recebeu e o cálculo compara com o que é público.</div>
+      <div class="filters" style="margin-bottom:12px">
+        <div class="f"><label>Produto</label><select id="rf-tipo" onchange="calcRF()">
+          <option>CDB</option><option>LCI</option><option>LCA</option><option>CRI</option><option>CRA</option>
+          <option value="DEB">Debênture</option><option value="DEB-INC">Debênture incentivada</option></select></div>
+        <div class="f"><label>Indexador</label><select id="rf-idx" onchange="calcRF()">
+          <option value="CDI">% do CDI</option><option value="PRE">Prefixado % a.a.</option><option value="IPCA">IPCA + % a.a.</option></select></div>
+        <div class="f"><label>Taxa</label><input type="number" id="rf-taxa" value="110" step="1" oninput="calcRF()"></div>
+        <div class="f"><label>Prazo (anos)</label><input type="number" id="rf-anos" value="2" step="0.5" min="0.1" oninput="calcRF()"></div>
+        <div class="f"><label>Valor R$</label><input type="number" id="rf-val" value="50000" step="10000" oninput="calcRF()"></div>
+      </div>
+      <div id="rf-out"></div>
+    </div>
+
+    <div class="card">
+      <div class="ct">O que o mercado projeta — Focus/BCB</div>
+      <div class="cs">Mediana de ~100 analistas. É expectativa, não previsão: o consenso erra, e com frequência.</div>
+      <svg id="rf-focus" viewBox="0 0 420 250" role="img" aria-label="Projeções de Selic e IPCA"></svg>
+      <div class="cs" style="margin-top:8px">Se a Selic cair como projetado, quem travar prefixado hoje mantém a taxa; quem ficar no CDI acompanha a queda. O contrário vale se a projeção errar para cima.</div>
+    </div>
+  </div>
+
+  <div class="card tw">
+    <div class="ct" style="margin-bottom:2px">Tesouro Direto <span class="mini" id="rf-td-base"></span></div>
+    <div class="cs">Risco soberano — é o piso contra o qual o risco de banco precisa pagar prêmio.</div>
+    <table id="rf-td"><thead><tr><th>Título</th><th>Vencimento</th><th>Taxa a.a.</th><th>Preço unitário</th><th>Rendimento total</th></tr></thead><tbody></tbody></table>
+    <div class="cs" style="margin-top:10px"><b>Atenção ao Tesouro Selic:</b> a taxa mostrada (0,01%–0,08%) é o <b>spread sobre a Selic</b>, não o rendimento. O retorno é Selic + spread, hoje perto de 14%. A coluna "rendimento total" já faz essa soma.</div>
+  </div>
+</div>
+
+<!-- ============ FUNDOS ============ -->
+<div id="pane-d" style="display:none">
+  <div class="expl">
+    <h2>📦 O que é um fundo de investimento</h2>
+    <p>Um fundo <span class="k">junta o dinheiro de várias pessoas</span> e entrega a um gestor profissional, que decide onde aplicar seguindo uma política definida em regulamento. Você compra <b>cotas</b>; o valor da cota sobe ou desce conforme o resultado da carteira. A vantagem é acesso e delegação — com pouco dinheiro você entra em estratégias que sozinho não alcançaria.</p>
+    <p><b>O retorno mostrado aqui já é líquido de taxa de administração</b>, porque ela é descontada da cota todo dia. Não é líquido de imposto: fundo comum tem come-cotas semestral e IR pela tabela regressiva. Taxa de performance, quando existe, também já está na cota.</p>
+    <p><b>Comparar fundo de ações com CDI diz pouco.</b> O CDI é a régua de quem não quer oscilação; um fundo de ações aceita oscilar muito em troca de retorno maior no longo prazo. Ficar abaixo do CDI num ano não significa fundo ruim, assim como ficar acima não significa bom — significa que o risco era outro.</p>
+  </div>
+
+  <div class="kpis">
+    <div class="card kpi"><div class="l">Fundos no recorte</div><div class="v" id="d1">—</div><div class="n" id="d1n"></div></div>
+    <div class="card kpi"><div class="l">CDI em 12 meses</div><div class="v" id="d2">—</div><div class="n">a régua do período</div></div>
+    <div class="card kpi"><div class="l">Mediana do grupo</div><div class="v" id="d3">—</div><div class="n">retorno em 12 meses</div></div>
+    <div class="card kpi"><div class="l">Acima do CDI</div><div class="v" id="d4">—</div><div class="n" id="d4n"></div></div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="filters" style="margin-bottom:0">
+      <div class="f"><label>Classe</label><select id="d-cl" onchange="renderD()">
+        <option>Renda Fixa</option><option>Multimercado</option><option>Ações</option><option>Cambial</option></select></div>
+      <div class="f"><label>Retorno mín %</label><input type="number" id="d-ret" value="-100" step="5" oninput="renderD()"></div>
+      <div class="f"><label>Volatilidade máx %</label><input type="number" id="d-vol" value="100" step="5" oninput="renderD()"></div>
+      <div class="f"><label>PL mín R$ mi</label><input type="number" id="d-pl" value="300" step="100" oninput="renderD()"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="ct">Top 5 pelos critérios definidos — <span style="color:var(--dim);font-weight:400">não é ranking de qualidade</span></div>
+    <div class="cs">Eixos normalizados entre os fundos do grupo filtrado. Mude os pesos e a ordem muda.</div>
+    <div class="wts" style="margin-bottom:14px">
+      <div class="f"><label>Retorno</label><input type="number" id="q1" value="30" step="5" oninput="renderD()"></div>
+      <div class="f"><label>Retorno por risco</label><input type="number" id="q2" value="30" step="5" oninput="renderD()"></div>
+      <div class="f"><label>Baixa volatilidade</label><input type="number" id="q3" value="20" step="5" oninput="renderD()"></div>
+      <div class="f"><label>Escala (PL)</label><input type="number" id="q4" value="10" step="5" oninput="renderD()"></div>
+      <div class="f"><label>Cotistas</label><input type="number" id="q5" value="10" step="5" oninput="renderD()"></div>
+    </div>
+    <div class="top5" id="t5d"></div>
+    <details><summary>Por que este Top 5 engana mais que os outros</summary>
+      Ele ordena por <b>desempenho passado</b>, e fundo é a classe onde isso menos se repete. Um ano no topo pode ser competência do gestor, sorte de posicionamento, ou um risco que ainda não estourou — e os três produzem exatamente o mesmo número aqui. "Retorno por risco" ajuda um pouco, porque separa quem entregou com menos sobe-e-desce, mas continua olhando só para trás. O que ele <b>não</b> vê: mudança de gestor, alteração de estratégia, fechamento para captação, e a carteira que gerou esse retorno.
+    </details>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="ct">Retorno × volatilidade</div>
+      <div class="cs">Direita = oscilou mais. Alto = rendeu mais. A linha marca o CDI: acima dela, rendeu mais que a renda fixa básica — assumindo mais risco para isso.</div>
+      <svg id="d-sc" viewBox="0 0 640 340" role="img" aria-label="Retorno contra volatilidade dos fundos"></svg>
+    </div>
+    <div class="card">
+      <div class="ct">Maiores retornos do grupo</div>
+      <div class="cs">Doze meses. Rentabilidade passada não se repete.</div>
+      <svg id="d-bar" viewBox="0 0 420 340" role="img" aria-label="Maiores retornos"></svg>
+    </div>
+  </div>
+
+  <div class="card tw">
+    <div class="ct" style="margin-bottom:2px">Fundos</div>
+    <div class="cs">Recorte com PL acima de R$ 300 milhões, ao menos 500 cotistas e sem exclusivos — só o que investidor comum consegue acessar. A base completa tem 25 mil fundos e está em <code>dados/screener_fundos.csv</code>.</div>
+    <table id="td"><thead><tr>
+      <th onclick="srt('d','n')">Fundo</th>
+      <th onclick="srt('d','r')"><abbr title="Variação da cota em 12 meses. Já descontada a taxa de administração, que sai da cota diariamente. Não descontado o imposto de renda.">Retorno %</abbr></th>
+      <th onclick="srt('d','cdi')"><abbr title="Retorno dividido pelo CDI acumulado no mesmo período. 100% significa empatar com a renda fixa básica.">% do CDI</abbr></th>
+      <th onclick="srt('d','v')"><abbr title="Desvio-padrão das variações mensais, anualizado. Mede o tamanho do sobe-e-desce, não a chance de perder.">Volatilidade %</abbr></th>
+      <th onclick="srt('d','pl')">PL R$ mi</th><th onclick="srt('d','ct')">Cotistas</th>
+    </tr></thead><tbody></tbody></table>
+  </div>
+</div>
+
+<!-- ============ CARTEIRA ============ -->
+<div id="pane-c" style="display:none">
+  <div class="expl">
+    <h2>🧭 Para que serve este diagnóstico</h2>
+    <p>Olhando ativo por ativo, tudo pode parecer bem. O que só aparece olhando o <span class="k">conjunto</span> é o risco repetido: três FIIs diferentes que respondem à mesma curva de juros, quatro ações do mesmo setor, ou uma posição que sozinha decide o resultado de tudo.</p>
+    <p>A <span class="k">diversificação efetiva</span> é o número mais revelador daqui. Ela responde: "minhas posições se comportam como quantas, de fato?". Dez ativos em que um vale metade funcionam como três. Uma lista comprida pode esconder uma aposta só.</p>
+    <p><b>O que ele não faz:</b> dizer o que comprar, vender ou reduzir. Isso depende do seu prazo, do seu objetivo e de quanta queda você aguenta sem vender no pior momento — nada disso está nos números, e fingir o contrário seria o erro mais caro desta página.</p>
+  </div>
+  <div class="card warn">
+    <b>Isto é um diagnóstico de estrutura, não uma recomendação.</b>
+    Ele descreve o que a sua carteira <i>é</i> — onde está concentrada, quais riscos se repetem, como cada posição se comporta nos mesmos critérios das outras abas. Ele <b>não diz o que comprar, vender ou reduzir</b>: isso depende do seu objetivo, prazo e tolerância a perda, que nenhum número aqui conhece. Nada sai desta página: os dados ficam só no seu navegador.
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="ct">Adicionar posição</div>
+    <div class="cs">Escolha o ativo e informe a quantidade. Para o que não está em bolsa — CDB, Tesouro, poupança — use "Outro" e informe o valor.</div>
+    <div class="filters" style="align-items:flex-end">
+      <div class="f"><label>Tipo</label>
+        <select id="ci-tipo" onchange="mudouTipo()">
+          <option value="acao">Ação</option><option value="fii">FII</option><option value="outro">Outro (renda fixa etc.)</option>
+        </select></div>
+      <div class="f" id="w-ativo"><label>Ativo</label>
+        <select id="ci-ativo" style="min-width:230px"></select></div>
+      <div class="f" id="w-nome" style="display:none"><label>Nome</label>
+        <input id="ci-nome" placeholder="Tesouro IPCA+ 2035" style="min-width:230px"></div>
+      <div class="f" id="w-qtd"><label>Quantidade</label>
+        <input type="number" id="ci-qtd" min="1" step="1" placeholder="100"></div>
+      <div class="f" id="w-val" style="display:none"><label>Valor R$</label>
+        <input type="number" id="ci-val" min="1" step="100" placeholder="25000"></div>
+      <button class="tab on" onclick="addPos()" style="height:37px">+ Adicionar</button>
+    </div>
+    <div id="cart-erro" style="margin-top:8px"></div>
+
+    <div id="cart-lista" style="margin-top:14px"></div>
+
+    <div style="display:flex;gap:9px;margin-top:12px;flex-wrap:wrap">
+      <button class="tab" onclick="exemploCarteira()">Carregar exemplo</button>
+      <button class="tab" onclick="limparCarteira()">Limpar tudo</button>
+    </div>
+  </div>
+
+  <div id="cart-res"></div>
+</div>
+
+<footer>
+  <b>Como ler o preço-teto.</b> É o preço em que o lucro do exercício dividido pelo preço igualaria o retorno que você exigiu. É aritmética sobre um ano passado, não projeção: se o lucro cair, o teto cai junto. Nada aqui considera crescimento futuro, e nenhum filtro distingue lucro recorrente de lucro extraordinário.<br><br>
+  Esta ferramenta é informativa. Investimentos envolvem riscos e nenhuma rentabilidade é garantida. A decisão final deve considerar seu perfil, objetivos e situação financeira, idealmente com apoio de um profissional registrado na CVM.
+</footer>
+</div>
+
+<script>
+const ACOES = [{"t":"HBRE3","s":"Finance","p":2.22,"ey":43.6,"tt":8.07,"roe":3.6,"po":0,"de":4.47,"ml":18.2,"al":3,"lu":0.1},{"t":"HBOR3","s":"Consumer Durables","p":1.92,"ey":35.9,"tt":5.75,"roe":3.3,"po":19,"de":11.06,"ml":8.2,"al":3,"lu":0.09},{"t":"EALT3","s":"Producer Manufacturing","p":11.99,"ey":34.5,"tt":34.43,"roe":25.6,"po":19,"de":0.97,"ml":16.4,"al":3,"lu":0.09},{"t":"EVEN3","s":"Finance","p":4.56,"ey":33.5,"tt":12.72,"roe":13.6,"po":50,"de":2.01,"ml":15.6,"al":3,"lu":0.3},{"t":"ANIM3","s":"Consumer Services","p":2.19,"ey":30,"tt":5.47,"roe":9.1,"po":0,"de":3.1,"ml":6.4,"al":2,"lu":0.26},{"t":"PLPL3","s":"Finance","p":7.02,"ey":29.2,"tt":17.06,"roe":37,"po":0,"de":-0.04,"ml":12.9,"al":3,"lu":0.42},{"t":"WIZC3","s":"Finance","p":7.87,"ey":28.5,"tt":18.71,"roe":28.4,"po":14,"de":-0.02,"ml":26.6,"al":3,"lu":0.37},{"t":"AZZA3","s":"Consumer Non-Durables","p":17.01,"ey":27.3,"tt":38.67,"roe":11.4,"po":55,"de":1.17,"ml":7.7,"al":3,"lu":0.91},{"t":"VULC3","s":"Consumer Non-Durables","p":14.04,"ey":26.6,"tt":31.14,"roe":48,"po":121,"de":0.87,"ml":32.7,"al":3,"lu":1.17},{"t":"MELK3","s":"Industrial Services","p":2.81,"ey":26.3,"tt":6.15,"roe":12.3,"po":19,"de":1.26,"ml":13.4,"al":3,"lu":0.15},{"t":"MTRE3","s":"Finance","p":2.92,"ey":25.9,"tt":6.31,"roe":7.4,"po":25,"de":0.8,"ml":7.4,"al":3,"lu":0.08},{"t":"JHSF3","s":"Finance","p":10.79,"ey":25.8,"tt":23.19,"roe":26.2,"po":0,"de":0.18,"ml":53.7,"al":3,"lu":1.87},{"t":"LPSB3","s":"Commercial Services","p":1.39,"ey":25.7,"tt":2.98,"roe":22.7,"po":49,"de":-1.03,"ml":25.6,"al":3,"lu":0.05},{"t":"PGMN3","s":"Retail Trade","p":3.47,"ey":25.6,"tt":7.4,"roe":8.4,"po":57,"de":1.12,"ml":1.8,"al":3,"lu":0.26},{"t":"SUZB3","s":"Process Industries","p":41.7,"ey":25.6,"tt":88.86,"roe":30.6,"po":0,"de":3.16,"ml":26.8,"al":2,"lu":13.44},{"t":"CYRE3","s":"Finance","p":21.67,"ey":25.3,"tt":45.72,"roe":20.9,"po":0,"de":1.95,"ml":25.4,"al":3,"lu":2.4},{"t":"BEEF3","s":"Distribution Services","p":3.44,"ey":24.7,"tt":7.08,"roe":44.8,"po":0,"de":2.64,"ml":1.5,"al":2,"lu":0.85},{"t":"LAVV3","s":"Finance","p":9.44,"ey":24.5,"tt":19.29,"roe":26.1,"po":87,"de":0.53,"ml":26.4,"al":3,"lu":0.46},{"t":"POMO3","s":"Producer Manufacturing","p":4.21,"ey":22.3,"tt":7.83,"roe":31.7,"po":58,"de":0.98,"ml":13.6,"al":3,"lu":1.24},{"t":"CALI3","s":"Industrial Services","p":29.99,"ey":21.9,"tt":54.7,"roe":16.2,"po":0,"de":2.33,"ml":12.5,"al":3,"lu":0.05},{"t":"RECV3","s":"Energy Minerals","p":10.23,"ey":21.6,"tt":18.42,"roe":14.7,"po":41,"de":0.86,"ml":20.2,"al":3,"lu":0.64},{"t":"ETER3","s":"Non-Energy Minerals","p":3.54,"ey":21.5,"tt":6.34,"roe":5.8,"po":22,"de":0.14,"ml":4.3,"al":3,"lu":0.05},{"t":"TRIS3","s":"Consumer Durables","p":4.12,"ey":21.3,"tt":7.32,"roe":14.4,"po":100,"de":2.19,"ml":15.5,"al":3,"lu":0.21},{"t":"GMAT3","s":"Retail Trade","p":3.73,"ey":21.1,"tt":6.56,"roe":16.2,"po":30,"de":0.45,"ml":4.8,"al":3,"lu":1.86},{"t":"GRND3","s":"Consumer Non-Durables","p":3.56,"ey":20.2,"tt":5.99,"roe":20.4,"po":33,"de":-2.32,"ml":25,"al":3,"lu":0.64},{"t":"CEAB3","s":"Retail Trade","p":9.18,"ey":20.2,"tt":15.43,"roe":15.8,"po":27,"de":-0.05,"ml":7.4,"al":3,"lu":0.59},{"t":"VLID3","s":"Commercial Services","p":17.03,"ey":19.7,"tt":27.92,"roe":15.6,"po":90,"de":0.05,"ml":13,"al":3,"lu":0.27},{"t":"VTRU3","s":"Commercial Services","p":12.71,"ey":19.3,"tt":20.4,"roe":12.6,"po":1,"de":1.98,"ml":16.4,"al":3,"lu":0.37},{"t":"PETR4","s":"Energy Minerals","p":40.87,"ey":19.2,"tt":65.42,"roe":26.5,"po":38,"de":2.24,"ml":22.2,"al":3,"lu":110.6},{"t":"CAMB3","s":"Consumer Non-Durables","p":8.6,"ey":18.7,"tt":13.4,"roe":22.4,"po":65,"de":-0.8,"ml":17.9,"al":3,"lu":0.07},{"t":"NUTR3","s":"Process Industries","p":2.08,"ey":18.3,"tt":3.18,"roe":10.7,"po":0,"de":2.16,"ml":2.5,"al":3,"lu":0.01},{"t":"ECOR3","s":"Transportation","p":6.63,"ey":18.3,"tt":10.09,"roe":19.8,"po":24,"de":3.83,"ml":7.5,"al":3,"lu":0.87},{"t":"EZTC3","s":"Finance","p":10.76,"ey":18,"tt":16.16,"roe":10.7,"po":56,"de":0.13,"ml":36.5,"al":3,"lu":0.55},{"t":"CSUD3","s":"Commercial Services","p":14.18,"ey":18,"tt":21.27,"roe":22.8,"po":92,"de":0.28,"ml":17,"al":3,"lu":0.11},{"t":"CSED3","s":"Consumer Services","p":4.4,"ey":17.9,"tt":6.56,"roe":18.7,"po":60,"de":0.63,"ml":10.5,"al":3,"lu":0.3},{"t":"ENGI3","s":"Utilities","p":11.5,"ey":16.6,"tt":15.88,"roe":14.8,"po":0,"de":3.84,"ml":8.9,"al":3,"lu":3.14},{"t":"BRAV3","s":"Energy Minerals","p":18.27,"ey":16.4,"tt":24.97,"roe":12,"po":4,"de":2.69,"ml":12.1,"al":2,"lu":1.41},{"t":"MDNE3","s":"Finance","p":24.9,"ey":16.2,"tt":33.68,"roe":27.7,"po":0,"de":0.7,"ml":17.8,"al":3,"lu":0.42},{"t":"ALUP3","s":"Utilities","p":11.33,"ey":16.2,"tt":15.27,"roe":13.8,"po":21,"de":2.84,"ml":39.4,"al":3,"lu":1.73},{"t":"DEXP3","s":"Process Industries","p":7.4,"ey":16.1,"tt":9.91,"roe":14.3,"po":0,"de":-0.41,"ml":6.7,"al":3,"lu":0.14},{"t":"DIRR3","s":"Finance","p":11.58,"ey":16,"tt":15.47,"roe":42.2,"po":117,"de":0.41,"ml":22.6,"al":3,"lu":0.98},{"t":"ROMI3","s":"Producer Manufacturing","p":5.85,"ey":16,"tt":7.81,"roe":6.9,"po":78,"de":3.34,"ml":6.5,"al":3,"lu":0.09},{"t":"SBFG3","s":"Retail Trade","p":9.17,"ey":15.6,"tt":11.89,"roe":10.7,"po":0,"de":2.28,"ml":4.2,"al":3,"lu":0.33},{"t":"MYPK3","s":"Producer Manufacturing","p":9.36,"ey":15.2,"tt":11.82,"roe":4.5,"po":21,"de":1.91,"ml":1.4,"al":3,"lu":0.22},{"t":"EUCA3","s":"Non-Energy Minerals","p":23.59,"ey":15,"tt":29.54,"roe":11.5,"po":31,"de":0.71,"ml":10.3,"al":3,"lu":0.32},{"t":"OFSA3","s":"Health Technology","p":26.42,"ey":14.9,"tt":32.91,"roe":27.9,"po":28,"de":0.87,"ml":18.1,"al":2,"lu":0.22},{"t":"PFRM3","s":"Distribution Services","p":7.05,"ey":14.6,"tt":8.6,"roe":7.7,"po":63,"de":1.19,"ml":1.1,"al":3,"lu":0.13},{"t":"BLAU3","s":"Health Technology","p":8.73,"ey":14.3,"tt":10.39,"roe":13.2,"po":61,"de":-0.04,"ml":17.4,"al":3,"lu":0.3},{"t":"KEPL3","s":"Producer Manufacturing","p":6.11,"ey":14.3,"tt":7.26,"roe":20.2,"po":20,"de":0.06,"ml":10.5,"al":3,"lu":0.16},{"t":"VITT3","s":"Process Industries","p":2.8,"ey":14.2,"tt":3.32,"roe":10.3,"po":0,"de":1.36,"ml":8.1,"al":3,"lu":0.07},{"t":"TTEN3","s":"Commercial Services","p":11.4,"ey":13.9,"tt":13.24,"roe":17.2,"po":0,"de":2.89,"ml":4.9,"al":3,"lu":0.81},{"t":"LEVE3","s":"Producer Manufacturing","p":32.11,"ey":13.9,"tt":37.24,"roe":70.5,"po":18,"de":1.01,"ml":11.3,"al":3,"lu":0.61},{"t":"CGRA3","s":"Retail Trade","p":24.18,"ey":13.6,"tt":27.41,"roe":9.5,"po":167,"de":-1.3,"ml":11.3,"al":3,"lu":0.08},{"t":"CLSC3","s":"Utilities","p":127.82,"ey":13.6,"tt":144.69,"roe":18.4,"po":50,"de":2.67,"ml":6.1,"al":3,"lu":0.73},{"t":"MULT3","s":"Finance","p":27.79,"ey":13.6,"tt":31.43,"roe":18.1,"po":44,"de":2.33,"ml":41.7,"al":3,"lu":1.14},{"t":"CAML3","s":"Process Industries","p":4.59,"ey":13.4,"tt":5.14,"roe":6.3,"po":46,"de":3.29,"ml":1.8,"al":3,"lu":0.22},{"t":"CMIG4","s":"Utilities","p":10.92,"ey":13.3,"tt":12.08,"roe":17.1,"po":72,"de":2.02,"ml":11.5,"al":3,"lu":4.9},{"t":"TECN3","s":"Consumer Durables","p":9.22,"ey":13.3,"tt":10.18,"roe":16.3,"po":5,"de":0.1,"ml":14.9,"al":3,"lu":0.07},{"t":"SOJA3","s":"Process Industries","p":5.37,"ey":13.1,"tt":5.87,"roe":5.1,"po":40,"de":2.45,"ml":3.9,"al":3,"lu":0.1},{"t":"WLMM3","s":"Distribution Services","p":19.94,"ey":13,"tt":21.56,"roe":11.2,"po":29,"de":1.32,"ml":2.9,"al":3,"lu":0.09}];
+const FIIS  = [{"t":"TGAR11","tp":"híbrido","p":47.67,"vp":108.03,"pvp":0.441,"dy":7.9,"tx":0.07,"cc":0.93,"ct":132351,"pl":2.55,"vac":null,"vacf":null,"inad":null,"ci":null,"ni":null},{"t":"BRCR11","tp":"tijolo","p":39.61,"vp":80.72,"pvp":0.491,"dy":5.8,"tx":0.2,"cc":0.71,"ct":111553,"pl":2.15,"vac":2.9,"vacf":2.8,"inad":0,"ci":44.2,"ni":5},{"t":"JSRE11","tp":"tijolo","p":57.65,"vp":101.64,"pvp":0.567,"dy":5.6,"tx":0.59,"cc":0.68,"ct":87940,"pl":2.11,"vac":5.5,"vacf":3.7,"inad":0,"ci":29.6,"ni":6},{"t":"PVBI11","tp":"tijolo","p":67.22,"vp":104.53,"pvp":0.643,"dy":4.6,"tx":0.57,"cc":0.73,"ct":182914,"pl":2.84,"vac":24.5,"vacf":37.6,"inad":0,"ci":40.5,"ni":9},{"t":"IRIM11","tp":"papel","p":64.54,"vp":82.68,"pvp":0.781,"dy":0,"tx":0.83,"cc":0.64,"ct":203118,"pl":2.91,"vac":null,"vacf":null,"inad":null,"ci":null,"ni":null},{"t":"HSML11","tp":"tijolo","p":83.53,"vp":100.06,"pvp":0.835,"dy":8.6,"tx":0.95,"cc":0.89,"ct":189962,"pl":2.13,"vac":null,"vacf":null,"inad":3.4,"ci":18.4,"ni":9},{"t":"MALL11","tp":"tijolo","p":101.62,"vp":118.1,"pvp":0.86,"dy":9.2,"tx":0.35,"cc":0.61,"ct":136153,"pl":2.1,"vac":3.7,"vacf":2.7,"inad":0.8,"ci":18.1,"ni":12},{"t":"CPTS11","tp":"híbrido","p":7.53,"vp":8.65,"pvp":0.871,"dy":13.9,"tx":0.8,"cc":0.65,"ct":392504,"pl":3.14,"vac":null,"vacf":null,"inad":null,"ci":null,"ni":null},{"t":"XPLG11","tp":"tijolo","p":91.96,"vp":105.03,"pvp":0.876,"dy":9.3,"tx":1.4,"cc":0.88,"ct":347304,"pl":5.4,"vac":9.3,"vacf":null,"inad":null,"ci":null,"ni":24},{"t":"GGRC11","tp":"tijolo","p":9.68,"vp":11.02,"pvp":0.878,"dy":13.3,"tx":0.04,"cc":0.56,"ct":372045,"pl":2.36,"vac":0,"vacf":null,"inad":null,"ci":null,"ni":41},{"t":"HGLG11","tp":"tijolo","p":147,"vp":166.6,"pvp":0.882,"dy":8,"tx":0.55,"cc":0.74,"ct":587366,"pl":7.6,"vac":3.3,"vacf":3.7,"inad":0,"ci":7.9,"ni":37},{"t":"GARE11","tp":"híbrido","p":8.16,"vp":9.19,"pvp":0.888,"dy":10.7,"tx":0.87,"cc":0.54,"ct":535457,"pl":2.66,"vac":0,"vacf":0,"inad":0,"ci":91.6,"ni":3},{"t":"TRXF11","tp":"tijolo","p":85.9,"vp":95.75,"pvp":0.897,"dy":18.3,"tx":0.93,"cc":0.47,"ct":331106,"pl":5.98,"vac":0,"vacf":null,"inad":null,"ci":null,"ni":99},{"t":"VISC11","tp":"tijolo","p":103.93,"vp":115.6,"pvp":0.899,"dy":8.7,"tx":1.08,"cc":0.9,"ct":347218,"pl":3.33,"vac":5.7,"vacf":5.5,"inad":6.2,"ci":20.5,"ni":32},{"t":"RECR11","tp":"papel","p":78.51,"vp":86.48,"pvp":0.908,"dy":14.6,"tx":0.19,"cc":0.88,"ct":174597,"pl":2.29,"vac":100,"vacf":null,"inad":null,"ci":null,"ni":1},{"t":"HGRU11","tp":"tijolo","p":119.25,"vp":128.52,"pvp":0.928,"dy":8.9,"tx":0.7,"cc":0.8,"ct":230263,"pl":2.99,"vac":0.8,"vacf":0.5,"inad":0,"ci":6.6,"ni":100},{"t":"HGBS11","tp":"tijolo","p":18.96,"vp":20.3,"pvp":0.934,"dy":10,"tx":0.58,"cc":0.5,"ct":196426,"pl":2.93,"vac":4.3,"vacf":3.6,"inad":0.9,"ci":18,"ni":16},{"t":"BTLG11","tp":"tijolo","p":100.73,"vp":107.04,"pvp":0.941,"dy":10.3,"tx":0.86,"cc":0.73,"ct":505908,"pl":7.43,"vac":5.1,"vacf":2.2,"inad":0,"ci":12.5,"ni":31},{"t":"KNRI11","tp":"tijolo","p":154.11,"vp":163.51,"pvp":0.942,"dy":10.2,"tx":1.04,"cc":0.85,"ct":323346,"pl":4.61,"vac":0.1,"vacf":0.1,"inad":0.4,"ci":17,"ni":18},{"t":"XPML11","tp":"tijolo","p":104.55,"vp":110.11,"pvp":0.949,"dy":9.3,"tx":0.75,"cc":0.42,"ct":733101,"pl":7.08,"vac":null,"vacf":null,"inad":0,"ci":30.3,"ni":14},{"t":"KNIP11","tp":"papel","p":90.37,"vp":92.06,"pvp":0.982,"dy":14.4,"tx":1,"cc":1,"ct":75269,"pl":7.37,"vac":null,"vacf":null,"inad":null,"ci":null,"ni":null},{"t":"BRCO11","tp":"tijolo","p":113.7,"vp":115.05,"pvp":0.988,"dy":10.9,"tx":0.02,"cc":0.98,"ct":138206,"pl":2.07,"vac":12.6,"vacf":4.2,"inad":0,"ci":21.4,"ni":14},{"t":"KNHY11","tp":"papel","p":97.81,"vp":97.66,"pvp":1.001,"dy":14.6,"tx":1.6,"cc":0.99,"ct":28501,"pl":3.04,"vac":null,"vacf":null,"inad":null,"ci":null,"ni":null},{"t":"MXRF11","tp":"papel","p":9.46,"vp":9.23,"pvp":1.025,"dy":14,"tx":0.96,"cc":0.56,"ct":1485336,"pl":4.25,"vac":null,"vacf":null,"inad":null,"ci":null,"ni":null},{"t":"KNCR11","tp":"papel","p":106.64,"vp":102.48,"pvp":1.041,"dy":12.9,"tx":1.04,"cc":0.81,"ct":592231,"pl":10.97,"vac":null,"vacf":null,"inad":null,"ci":null,"ni":null}];
+const RF    = {"focus":{"Selic":[{"v":13.75,"ano":"2026"},{"v":12,"ano":"2027"},{"v":10.5,"ano":"2028"}],"IPCA":[{"v":5.0278,"ano":"2026"},{"v":4.2194,"ano":"2027"},{"v":3.8,"ano":"2028"}]},"tesouro":[{"n":"Tesouro IPCA+","v":"15/05/2029","tx":8.26,"pu":3815.13},{"n":"Tesouro IPCA+","v":"15/05/2035","tx":8.13,"pu":2400.7},{"n":"Tesouro IPCA+","v":"15/05/2045","tx":7.54,"pu":1222.02},{"n":"Tesouro IPCA+","v":"15/08/2026","tx":14.69,"pu":4725.73},{"n":"Tesouro IPCA+","v":"15/08/2032","tx":8.28,"pu":2945.4},{"n":"Tesouro IPCA+","v":"15/08/2040","tx":7.75,"pu":1674.84},{"n":"Tesouro IPCA+","v":"15/08/2050","tx":7.5,"pu":843.71},{"n":"Tesouro Prefixado","v":"01/01/2027","tx":13.64,"pu":950.52},{"n":"Tesouro Prefixado","v":"01/01/2028","tx":13.91,"pu":834.09},{"n":"Tesouro Prefixado","v":"01/01/2029","tx":14.22,"pu":729.03},{"n":"Tesouro Prefixado","v":"01/01/2031","tx":14.45,"pu":554.8},{"n":"Tesouro Prefixado","v":"01/01/2032","tx":14.55,"pu":482.48},{"n":"Tesouro Selic","v":"01/03/2027","tx":0.01,"pu":19608.75},{"n":"Tesouro Selic","v":"01/03/2028","tx":0.03,"pu":19602.16},{"n":"Tesouro Selic","v":"01/03/2029","tx":0.05,"pu":19587.45},{"n":"Tesouro Selic","v":"01/03/2031","tx":0.08,"pu":19535.76}],"macro":{"ipca12":{"v":4.64,"d":"01/06/2026"},"igpm":{"v":-1.16,"d":"01/07/2026"},"dolar":{"v":5.0908,"d":"07/08/2026"},"cdi":{"v":13.9,"d":"06/08/2026"},"selic":{"v":14,"d":"16/09/2026"}},"baseTD":"07/08/2026"};
+const EUA   = [{"t":"AAPL","n":"Apple Inc.","s":"TECHNOLOGY","p":313.33,"ey":2.8,"pl":36,"pvp":42.5,"roe":148.8,"mg":27.6,"dy":0.34,"be":1.09,"ee":27.4},{"t":"MSFT","n":"Microsoft Corporation","s":"TECHNOLOGY","p":499.99,"ey":3.6,"pl":27.8,"pvp":8.4,"roe":34,"mg":40.3,"dy":0.73,"be":1.1,"ee":17.8},{"t":"GOOGL","n":"Alphabet Inc Class A","s":"COMMUNICATION SERVICES","p":354.3,"ey":5.6,"pl":17.8,"pvp":7,"roe":48.7,"mg":54.8,"dy":0.24,"be":1.24,"ee":12.9},{"t":"AMZN","n":"Amazon.com Inc","s":"CONSUMER CYCLICAL","p":274.48,"ey":4.5,"pl":22.1,"pvp":5.4,"roe":30.6,"mg":17.4,"dy":null,"be":1.45,"ee":12},{"t":"NVDA","n":"NVIDIA Corporation","s":"TECHNOLOGY","p":223.96,"ey":2.9,"pl":34.2,"pvp":27.8,"roe":114.3,"mg":63,"dy":0.02,"be":2.22,"ee":27.8},{"t":"META","n":"Meta Platforms Inc.","s":"COMMUNICATION SERVICES","p":592.1,"ey":4.5,"pl":22.3,"pvp":5.8,"roe":29.8,"mg":29.8,"dy":0.36,"be":1.24,"ee":13.6},{"t":"BRK-B","n":"Berkshire Hathaway Inc","s":"FINANCIAL SERVICES","p":521.8,"ey":6.4,"pl":15.6,"pvp":1.5,"roe":10.5,"mg":19.3,"dy":null,"be":0.61,"ee":null},{"t":"JNJ","n":"Johnson \u0026 Johnson","s":"HEALTHCARE","p":259.24,"ey":3.3,"pl":30,"pvp":7.4,"roe":25.7,"mg":21.5,"dy":2.04,"be":0.23,"ee":19.2},{"t":"V","n":"Visa Inc. Class A","s":"FINANCIAL SERVICES","p":362.5,"ey":3.2,"pl":30.8,"pvp":19.5,"roe":61.2,"mg":50.8,"dy":0.72,"be":0.76,"ee":23.4},{"t":"JPM","n":"JPMorgan Chase \u0026 Co","s":"FINANCIAL SERVICES","p":357.52,"ey":6.5,"pl":15.3,"pvp":2.7,"roe":17.8,"mg":34.9,"dy":1.68,"be":0.98,"ee":null},{"t":"XOM","n":"Exxon Mobil Corp","s":"ENERGY","p":153.04,"ey":3.9,"pl":25.8,"pvp":2.5,"roe":12.6,"mg":9.1,"dy":2.63,"be":0.17,"ee":10.5},{"t":"KO","n":"The Coca-Cola Company","s":"CONSUMER DEFENSIVE","p":87.05,"ey":3.8,"pl":26.1,"pvp":10.4,"roe":42,"mg":28.6,"dy":2.39,"be":0.34,"ee":20.3},{"t":"PG","n":"Procter \u0026 Gamble Company","s":"CONSUMER DEFENSIVE","p":145.79,"ey":4.5,"pl":22,"pvp":6.4,"roe":30.3,"mg":18.4,"dy":2.9,"be":0.38,"ee":14.9},{"t":"UNH","n":"UnitedHealth Group Incorporated","s":"HEALTHCARE","p":407.08,"ey":3.3,"pl":30.7,"pvp":3.8,"roe":14.1,"mg":3.1,"dy":1.09,"be":0.63,"ee":18.2},{"t":"HD","n":"The Home Depot Inc","s":"CONSUMER CYCLICAL","p":355.62,"ey":4,"pl":25.3,"pvp":25.6,"roe":128.4,"mg":8.4,"dy":1.98,"be":0.96,"ee":16.6}];
+const FUNDOS= [{"n":"ITAÚ FIC DE FUNDOS INCENTIVADOS DE INVEST FINANCEIRO EM INFRAESTR CDI RF CRÉD PRIV - RESP LIMITADA","c":"Renda Fixa","r":4.41,"cdi":30,"v":7.8,"pl":1041,"ct":12307,"b":"DI de um dia"},{"n":"ITAÚ FIF - CIC FIF INCENTIVADOS EM INFRA RF CRED PRIV - RESP LIMITADA","c":"Renda Fixa","r":4.12,"cdi":28,"v":9.6,"pl":1563,"ct":34504,"b":"Índice de Mercado Andima todas NTN-B"},{"n":"KINEA INFRA FIF CIC DE FUNDOS INCENTIVADOS DE INVESTIMENTO EM INFRA RF CRED PRIV RESP LIMITADA","c":"Renda Fixa","r":3.27,"cdi":22,"v":8.1,"pl":2561,"ct":43763,"b":"Índice de Mercado Andima todas NTN-B"},{"n":"JGP ECOSSISTEMA FI EM COTAS DE FUNDOS INCENT DE INV EM INFRA II RENDA FIXA CRED PRIV RESP LIMITADA","c":"Renda Fixa","r":2.67,"cdi":18,"v":2.7,"pl":305,"ct":6987,"b":"Não se aplica"},{"n":"CAPITANIA INFRA RENDA 90 FUNDO INCENTIVADO DE INVESTIMENTO EM INFRAESTRUTURA RENDA FIXA CRÉDITO PRIV","c":"Renda Fixa","r":2.6,"cdi":18,"v":3.6,"pl":524,"ct":10609,"b":"DI de um dia"},{"n":"SPARTA INFRA CDI FI FINANCEIRO EM COTAS DE FUNDOS INCENTIVADOS DE INVESTIMENTO EM INFRAESTRUTURA RF","c":"Renda Fixa","r":2.4,"cdi":16,"v":3.5,"pl":2843,"ct":67919,"b":"Não se aplica"},{"n":"ITAÚ DEBÊNTURES INCENTIVADAS PRÉ TARGET 2029 SHIFT FIF INCENTIVADO INFRA RF CRED PRIV RESP LIMITADA","c":"Renda Fixa","r":1.97,"cdi":14,"v":5.5,"pl":353,"ct":653,"b":"DI de um dia"},{"n":"BTG PACTUAL DÍVIDA INFRA FIF EM COTAS DE FUNDOS INCENTIVADOS DE INVESTIMENTO EM INFRA RENDA FIXA","c":"Renda Fixa","r":1.92,"cdi":13,"v":6.6,"pl":1517,"ct":32721,"b":"Não se aplica"},{"n":"VINCI CRÉDITO FI EM COTAS DE FUNDOS INCENTIVADOS DE INVESTIMENTO EM INFRAESTRUTURA RENDA FIXA","c":"Renda Fixa","r":1.45,"cdi":10,"v":2.7,"pl":497,"ct":2215,"b":"Não se aplica"},{"n":"SPARTA INFRA FI EM COTAS DE FUNDOS INCENTIVADOS DE INVESTIMENTO EM INFRAESTRUTURA RENDA FIXA","c":"Renda Fixa","r":1.3,"cdi":9,"v":2.2,"pl":2082,"ct":91591,"b":"Índice de Mercado Andima todas NTN-B"},{"n":"SAFRA INFRA PREFIXADO FIF INV EM INFRAESTRUTURA CIC DE INV EM INFRA RENDA FIXA RESP LIMITADA","c":"Renda Fixa","r":1.15,"cdi":8,"v":7.7,"pl":382,"ct":725,"b":"DI de um dia"},{"n":"SAFRA INFRA PREFIXADO CARTEIRA MASTER FIF INV EM INFRAESTRUTURA CI EM INFRA RF RESP LIMITADA","c":"Renda Fixa","r":1.06,"cdi":7,"v":7.8,"pl":481,"ct":835,"b":"DI de um dia"},{"n":"CAPITANIA FI FINANCEIRO EM COTAS DE FUNDOS INCENTIVADOS DE INVESTIMENTO EM INFRAESTRUTURA RENDA FIXA","c":"Renda Fixa","r":0.99,"cdi":7,"v":6.5,"pl":1278,"ct":37050,"b":""},{"n":"BRADESCO FIF - CIC RF INCENTIVADO DE INVESTIMENTO EM INFRAESTRUTURA CDI CRED PRIV - RESP LIMITADA","c":"Renda Fixa","r":0.66,"cdi":5,"v":6.2,"pl":491,"ct":6771,"b":"Não se aplica"},{"n":"BOCAINA INFRA FI EM COTAS DE FUNDOS INCENTIVADOS DE INVESTIMENTO EM INFRAESTRUTURA RENDA FIXA","c":"Renda Fixa","r":0.34,"cdi":2,"v":9.8,"pl":557,"ct":24096,"b":""},{"n":"ITAÚ LUMINA PLUS DEB INCENTIVADAS FIIF CIC RF CRED PRIV LP RESPONSABILIDADE LIMITADA","c":"Renda Fixa","r":-0.43,"cdi":-3,"v":8.1,"pl":379,"ct":2001,"b":"DI de um dia"},{"n":"ITAÚ JANEIRO INFRA FIF INCENTIVADO EM INFRA DA CIC RF CRÉD PRIV LP RESP LIMITADA","c":"Renda Fixa","r":-0.44,"cdi":-3,"v":7.9,"pl":1417,"ct":6098,"b":"DI de um dia"},{"n":"VINLAND FUNDO INCENTIVADO EM INVESTIMENTO EM DEB DE INFRA ATIVO FIF RF CRÉD PRIV LP RESP LIMITADA","c":"Renda Fixa","r":-0.66,"cdi":-5,"v":6.7,"pl":1125,"ct":16588,"b":"DI de um dia"},{"n":"LEGACY CAPITAL RENDA FIXA INFRA SELEÇÃO FC DE FII EM DEB DE INFRA CRÉD PRIV LP RESP LIMITADA","c":"Renda Fixa","r":-0.71,"cdi":-5,"v":6.2,"pl":944,"ct":7276,"b":"DI de um dia"},{"n":"VINLAND RENDA FIXA INFRA SELEÇÃO FC DE FIF INCENTIVADO EM DEB DE INFRA CRÉD PRIV LP RESP LIMITADA","c":"Renda Fixa","r":-0.72,"cdi":-5,"v":6.5,"pl":2970,"ct":23375,"b":"DI de um dia"},{"n":"ITAÚ ARTAX INFRA FIF INCENTIVADO INFRA CIC RF CRED PRIV LP - RESP LIMITADA","c":"Renda Fixa","r":-0.93,"cdi":-6,"v":8.5,"pl":1079,"ct":7366,"b":"DI de um dia"},{"n":"SPARTA DEB INC ESTRAT FUNDOS INCENTIVADOS DE INVEST FINANCEIRO EM INFRA RENDA FIXA - RESP LIMITADA","c":"Renda Fixa","r":-1.03,"cdi":-7,"v":7.3,"pl":410,"ct":6096,"b":"OUTROS"},{"n":"ABSOLUTE HIDRA CDI PLUS SELEÇÃO FIF INCENTIVADO EM INFRA DA CIC RF CRÉD PRIV RESP LIMITADA","c":"Renda Fixa","r":-1.23,"cdi":-8,"v":7,"pl":735,"ct":5022,"b":"DI de um dia"},{"n":"MANAGER ARX HEDGE S FIF INVESTIMENTO EM INFRA CIC DE INV EM INFRAESTRUTURA RENDA FIXA RESP LIMITADA","c":"Renda Fixa","r":-1.45,"cdi":-10,"v":7.7,"pl":1294,"ct":5390,"b":"DI de um dia"},{"n":"RB CAPITAL FIC DE FUNDO INCENTIVADO DE INVESTIMENTO FINANCEIRO EM INFRA RENDA FIXA - RESP LTDA","c":"Renda Fixa","r":-1.49,"cdi":-10,"v":6.8,"pl":899,"ct":10693,"b":"DI de um dia"},{"n":"BB RF DEBÊNTURES INCENTIVADAS CDI FIC FIF INFRAESTRUTURA CRÉDITO PRIVADO RESPONSABILIDADE LIMITADA","c":"Renda Fixa","r":-1.51,"cdi":-10,"v":7.3,"pl":3792,"ct":41440,"b":"DI de um dia"},{"n":"ITAÚ DEB INCENTIVADAS IMA-B FIF INCENTIVADO EM INFRA DA CIC RENDA FIXA CRÉDITO PRIVADO RESP LIMITADA","c":"Renda Fixa","r":-1.54,"cdi":-11,"v":6,"pl":1449,"ct":6571,"b":"Índice de Mercado Andima todas NTN-B"},{"n":"SAFRA INFRA RENDA FIXA ATIVO FIF INVEST EM INFRA CIC DE INV EM INFRA RF LONGO PRAZO RESP LIMITADA","c":"Renda Fixa","r":-1.55,"cdi":-11,"v":7.9,"pl":1093,"ct":5524,"b":"DI de um dia"},{"n":"ITAÚ KINEA DEBÊNTURES INCENTIVADAS FIF INCENTIVADO INFRA CIC RF CRED PRIV LP - RESP LIMITADA","c":"Renda Fixa","r":-1.64,"cdi":-11,"v":7.9,"pl":315,"ct":1608,"b":"DI de um dia"},{"n":"ABSOLUTE HIDRA SELEÇÃO CDI FIF DA CIC INCENTIVADOS DE INV EM INFRA RF CRÉDITO PRIVADO","c":"Renda Fixa","r":-1.71,"cdi":-12,"v":7.4,"pl":5298,"ct":30654,"b":"DI de um dia"},{"n":"SANTANDER INVESTIMENTO EM INFRAESTRUTURA MULTIESTRATÉGIA RF CRÉDITO PRIVADO CIC FIF RESP LIMITADA","c":"Renda Fixa","r":-1.73,"cdi":-12,"v":7.9,"pl":662,"ct":3940,"b":"DI de um dia"},{"n":"SICREDI FIF INCENTIVADO EM DEBÊNTURES DE INFRAESTRUTURA CDI RF CRED PRIV - RESPONSABILIDADE LIMITADA","c":"Renda Fixa","r":-1.73,"cdi":-12,"v":8.6,"pl":1084,"ct":8970,"b":"DI de um dia"},{"n":"SAFRA INFRA CDI EXCLUSIVE FIF INV EM INFRAESTRUTURA CIC DE INV EM INFRA RF LONGO PRAZO RESP LIMITADA","c":"Renda Fixa","r":-1.76,"cdi":-12,"v":8.2,"pl":1162,"ct":847,"b":"DI de um dia"},{"n":"CAPITÂNIA PREMIUM 45 FIC DE FIF RENDA FIXA CRÉDITO PRIVADO LONGO PRAZO - RESPONSABILIDADE LIMITADA","c":"Renda Fixa","r":-1.83,"cdi":-13,"v":5.2,"pl":461,"ct":14923,"b":"DI de um dia"},{"n":"AZ QUEST DEB INCENTIVADAS FIC DE FIF INCENTIVADO DE INVESTIMENTO EM INFRA RENDA FIXA CRÉDITO PRIVADO","c":"Renda Fixa","r":-1.85,"cdi":-13,"v":6.4,"pl":420,"ct":8221,"b":"Não se aplica"},{"n":"XP DEB INCENT IMAB CRÉD PRIV FUNDO INCENTIVADO DE INV FINANCEIRO EM INFRA RENDA FIXA - RESP LTDA","c":"Renda Fixa","r":-1.87,"cdi":-13,"v":6.7,"pl":481,"ct":14502,"b":"Índice de Mercado Andima todas NTN-B"},{"n":"ITAÚ ACTION DEB INCENTIVADAS FIF INCENTIVADO INFRA CIC RF CRED PRIV LP - RESP LIMITADA","c":"Renda Fixa","r":-1.88,"cdi":-13,"v":8.1,"pl":562,"ct":10198,"b":"Índice de Mercado Andima todas NTN-B"},{"n":"BTG PACTUAL TOTAL FUNDO INCENTIVADO DE INVESTIMENTO EM INFRAESTRUTURA RENDA FIXA","c":"Renda Fixa","r":-1.93,"cdi":-13,"v":7.6,"pl":2802,"ct":25710,"b":"Não se aplica"},{"n":"ABSOLUTE HIDRA CDI FI EM COTAS DE FUNDOS INCENTIVADOS DE INVESTIMENTO EM INFRAESTRUTURA RENDA FIXA","c":"Renda Fixa","r":-1.95,"cdi":-13,"v":7.4,"pl":3132,"ct":31957,"b":"Não se aplica"},{"n":"SAFRA CAPITAL MARKET INFRA PROFIT II FIF INV EM INFRA CIC DE INV EM INFRA RENDA FIXA RESP LIMITADA","c":"Renda Fixa","r":-1.97,"cdi":-14,"v":7.9,"pl":4096,"ct":19024,"b":"DI de um dia"},{"n":"HASHDEX 100 NASDAQ CRYPTO INDEX FUNDO DE INVESTIMENTO MULTIMERCADO","c":"Multimercado","r":1573.39,"cdi":10797,"v":2346.9,"pl":459,"ct":35561,"b":"Não se aplica"},{"n":"KAPITALO K10 FUNDO DE INVESTIMENTO FINANCEIRO EM QUOTAS DE FUNDOS DE INVESTIMENTO MULTIMERCADO","c":"Multimercado","r":162.88,"cdi":1118,"v":355.5,"pl":1327,"ct":9650,"b":"DI de um dia"},{"n":"HASHDEX BITCOIN FUNDO DE INVESTIMENTO MULTIMERCADO","c":"Multimercado","r":30.04,"cdi":206,"v":81.7,"pl":588,"ct":67288,"b":"OUTROS"},{"n":"ITAÚ INDEX BITCOIN USD FIF DA CLASSE DE INVESTIMENTO EM COTAS MULTIMERCADO RESPONSABILIDADE LIMITADA","c":"Multimercado","r":29.04,"cdi":199,"v":80.8,"pl":519,"ct":67129,"b":"Não se aplica"},{"n":"MAR ABSOLUTO FUNDO DE INVESTIMENTO FINANCEIRO EM COTAS DE FUNDOS DE INVESTIMENTO MULTIMERCADO","c":"Multimercado","r":21.61,"cdi":148,"v":30.8,"pl":527,"ct":1180,"b":""},{"n":"MAR ABSOLUTO II FUNDO DE INVESTIMENTO FINANCEIRO EM COTAS DE FUNDOS DE INVESTIMENTO MULTIMERCADO","c":"Multimercado","r":21.55,"cdi":148,"v":30.7,"pl":349,"ct":1619,"b":"Não se aplica"},{"n":"BTG PACTUAL SYNERGY EQUITY HEDGE FUNDO DE INVESTIMENTO FINANCEIRO MULTIMERCADO","c":"Multimercado","r":13.72,"cdi":94,"v":43.3,"pl":978,"ct":3229,"b":"Não se aplica"},{"n":"EMPIRICA LOTUS IPCA FUNDO DE INVESTIMENTO FINANCEIRO EM COTAS DE FUNDOS DE INVESTIMENTO MULTIMERCADO","c":"Multimercado","r":12.61,"cdi":87,"v":38.3,"pl":496,"ct":7385,"b":"Índice de Preços ao Consumidor Amplo (IPCA/IBGE)"},{"n":"EMPIRICA LOTUS FUNDO DE INVESTIMENTO FINANCEIRO EM COTAS DE FUNDOS DE INVESTIMENTO MULTIMERCADO","c":"Multimercado","r":8.86,"cdi":61,"v":25.6,"pl":316,"ct":2065,"b":"DI de um dia"},{"n":"CARTEIRA ITAÚ ASSET INTERNACIONAL DE INVESTIMENTO FIF DA CIC MULTIMERCADO IE RESP LIMITADA","c":"Multimercado","r":5.4,"cdi":37,"v":6.1,"pl":340,"ct":7822,"b":"OUTROS"},{"n":"SANTANDER GLOBAL EQUITIES DÓLAR MASTER MULTIMERCADO INVESTIMENTO NO EXTERIOR - CIC FIF RESP LIMITADA","c":"Multimercado","r":5.14,"cdi":35,"v":13.2,"pl":520,"ct":5516,"b":"OUTROS"},{"n":"REAL INVESTOR FIC DE FUNDO DE INVESTIMENTO FINANCEIRO MULTIMERCADO - RESPONSABILIDADE LIMITADA","c":"Multimercado","r":5.04,"cdi":35,"v":4.4,"pl":1392,"ct":22471,"b":"DI de um dia"},{"n":"ITAÚ INDEX MULTIMERCADO ESTRATÉGIA SP 500 USD FIF DA CLASSE DE INVESTIMENTO EM COTAS RESP LIMITADA","c":"Multimercado","r":3.74,"cdi":26,"v":14.2,"pl":408,"ct":17104,"b":"OUTROS"},{"n":"KAPITALO ZETA MERÍDIA FUNDO DE INVESTIMENTO EM COTAS DE FI FINANCEIRO MULTIMERCADO","c":"Multimercado","r":3.45,"cdi":24,"v":17.1,"pl":2227,"ct":935,"b":"Não se aplica"},{"n":"SAFRA S\u0026P REAIS FUNDO DE INVESTIMENTO FINANCEIRO CLASSE DE INV EM COTAS MULTIMERCADO RESP LIMITADA","c":"Multimercado","r":3.08,"cdi":21,"v":18.4,"pl":442,"ct":4322,"b":"DI de um dia"},{"n":"TREND OURO DÓLAR CLASSE DE INVESTIMENTO MULTIMERCADO - RESPONSABILIDADE LIMITADA","c":"Multimercado","r":3.05,"cdi":21,"v":35.2,"pl":430,"ct":25697,"b":""},{"n":"IBIUNA HEDGE STH FIF - CLASSE DE INVESTIMENTO EM COTAS MULTIMERCADO - RESP LIMITADA","c":"Multimercado","r":2.96,"cdi":20,"v":12.6,"pl":529,"ct":4888,"b":"DI de um dia"},{"n":"BRADESCO IBIUNA HEDGE STH FIF - CIC MULTIMERCADO - RESPONSABILIDADE LIMITADA","c":"Multimercado","r":2.91,"cdi":20,"v":12.3,"pl":328,"ct":2255,"b":"DI de um dia"},{"n":"IBIUNA HEDGE ST ADVISORY FIF - CLASSE DE INVESTIMENTO EM COTAS MULTIMERCADO - RESP LIMITADA","c":"Multimercado","r":2.89,"cdi":20,"v":12.6,"pl":744,"ct":16447,"b":"DI de um dia"},{"n":"CLASSE ÚNICA DO WESTERN ASSET US INDEX 500 FIF MULTIMERCADO RESPONSABILIDADE LIMITADA","c":"Multimercado","r":2.64,"cdi":18,"v":18.7,"pl":1082,"ct":36302,"b":"OUTROS"},{"n":"CAPSTONE MACRO FUNDO DE INVESTIMENTO FINANCEIRO EM COTAS DE FUNDOS DE INVESTIMENTO MULTIMERCADO","c":"Multimercado","r":1.28,"cdi":9,"v":9.4,"pl":928,"ct":622,"b":""},{"n":"CAPSTONE MACRO FEEDER ADVISORY FUNDO DE INVESTIMENTO EM COTAS MULTIMERCADO","c":"Multimercado","r":1.24,"cdi":9,"v":9.3,"pl":305,"ct":670,"b":"Não se aplica"},{"n":"IBIUNA LONG SHORT STLS FIF - CLASSE DE INVESTIMENTO EM COTAS MULTIMERCADO - RESP LIMITADA","c":"Multimercado","r":0.83,"cdi":6,"v":12.3,"pl":606,"ct":2231,"b":"DI de um dia"},{"n":"SPX NIMITZ GRIPEN ADVISORY FUNDO DE INVESTIMENTO FINANCEIRO DA CIC MULTIMERCADO RESP LIMITADA","c":"Multimercado","r":0.76,"cdi":5,"v":8.8,"pl":601,"ct":4107,"b":"DI de um dia"},{"n":"BTGP ACCESS SPX NIMITZ FI FINANCEIRO EM QUOTAS DE FUNDOS DE INVESTIMENTO MULTIMERCADO","c":"Multimercado","r":0.75,"cdi":5,"v":8.8,"pl":365,"ct":2802,"b":""},{"n":"CONEXÃO SPX NIMITZ BP FIF - CLASSE DE COTAS DE INVESTIMENTO MULTIMERCADO - RESP LIMITADA","c":"Multimercado","r":0.74,"cdi":5,"v":8.8,"pl":324,"ct":770,"b":"Não se aplica"},{"n":"IBIUNA HEDGE FIF - CLASSE DE INVESTIMENTO EM COTAS MULTIMERCADO - RESP LIMITADA","c":"Multimercado","r":0.62,"cdi":4,"v":9.5,"pl":403,"ct":9776,"b":"DI de um dia"},{"n":"IBIUNA HEDGE SELEÇÃO MULTIMERCADO FUNDO DE INVESTIMENTO FINANCEIRO DA CIC RESP LIMITADA","c":"Multimercado","r":0.56,"cdi":4,"v":9.5,"pl":440,"ct":6394,"b":"DI de um dia"},{"n":"ITAÚ FUND OF FUNDS ORION MULT CRÉDITO PRIVADO INVESTIMENTO NO EXTERIOR FIF DA CIC RESP LIMITADA","c":"Multimercado","r":0.05,"cdi":0,"v":9.2,"pl":2888,"ct":2369,"b":"DI de um dia"},{"n":"ITAÚ JANEIRO DISTRIBUIDORES FIF DA CLASSE DE INV EM COTAS MULTIMERCADO - RESPONSABILIDADE LIMITADA","c":"Multimercado","r":-0.33,"cdi":-2,"v":9.2,"pl":1276,"ct":11850,"b":"DI de um dia"},{"n":"ITAÚ JANEIRO MULTIMERCADO FIF DA CLASSE DE INVESTIMENTO EM COTAS RESP LIMITADA","c":"Multimercado","r":-0.33,"cdi":-2,"v":9.2,"pl":1168,"ct":11792,"b":"DI de um dia"},{"n":"ITAÚ PRIVATE JANEIRO MULTIMERCADO FIF DA CLASSE DE INVESTIMENTO EM COTAS RESPONSABILIDADE LIMITADA","c":"Multimercado","r":-0.33,"cdi":-2,"v":9.2,"pl":331,"ct":627,"b":"DI de um dia"},{"n":"TÁVOLA EQUITY HEDGE 15 FUNDO DE INVESTIMENTO FINANCEIRO MULTIMERCADO","c":"Multimercado","r":-0.84,"cdi":-6,"v":5.7,"pl":461,"ct":5466,"b":"DI de um dia"},{"n":"KAPITALO KAPPA ADVISORY FUNDO DE INVESTIMENTO FINANCEIRO EM COTAS DE FI MULTIMERCADO","c":"Multimercado","r":-0.9,"cdi":-6,"v":12.7,"pl":499,"ct":11490,"b":"DI de um dia"},{"n":"ITAÚ MULTI HEDGE FUND 30 MULTIMERCADO FIF CIC RESPONSABILIDADE LIMITADA","c":"Multimercado","r":-0.95,"cdi":-7,"v":7.5,"pl":4057,"ct":3349,"b":"DI de um dia"},{"n":"JGP CRÉDITO ECOSSISTEMA 360 ADVISORY FIC DE FIF MULTIMERCADO CRÉD PRIV - RESPONSABILIDADE LIMITADA","c":"Multimercado","r":-1.09,"cdi":-7,"v":10.1,"pl":542,"ct":4438,"b":"Não se aplica"},{"n":"ACCESS KAPITALO K10 FUNDO DE INVESTIMENTO FINANCEIRO EM COTAS DE FUNDOS DE INVESTIMENTO MULTIMERCADO","c":"Multimercado","r":-1.18,"cdi":-8,"v":9.3,"pl":516,"ct":8760,"b":"Não se aplica"},{"n":"ITAÚ SOLUTIONS VEGA FIF DA CLASSE DE INVESTIMENTO EM COTAS MULT RESP LIMITADA","c":"Multimercado","r":-1.19,"cdi":-8,"v":9.4,"pl":348,"ct":516,"b":"DI de um dia"},{"n":"KAPITALO K10 ADVISORY FI FINANCEIRO EM COTAS DE FUNDOS DE INVESTIMENTO MULTIMERCADO","c":"Multimercado","r":-1.19,"cdi":-8,"v":9.4,"pl":1211,"ct":29080,"b":"Não se aplica"},{"n":"KAPITALO K10 ÁGORA FIF - CIC MULTIMERCADO - RESPONSABILIDADE LIMITADA","c":"Multimercado","r":-1.23,"cdi":-8,"v":9.3,"pl":336,"ct":4440,"b":"Não se aplica"},{"n":"BTG PACTUAL SYNERGY LONG BIAS FUNDO DE INVESTIMENTO FINANCEIRO EM AÇÕES","c":"Ações","r":16.76,"cdi":115,"v":45.2,"pl":568,"ct":669,"b":"Não se aplica"},{"n":"MS GLOBAL OPPORTUNITIES DÓLAR ADVISORY CLASSE DE FIC FIA IE - RESP LIMITADA","c":"Ações","r":15.99,"cdi":110,"v":16.8,"pl":601,"ct":8788,"b":""},{"n":"CLASSE ÚNICA DO WESTERN ASSET FUNDO DE INVESTIMENTO FINANCEIRO AÇÕES BDR NÍVEL I - RESP LIMITADA","c":"Ações","r":8.84,"cdi":61,"v":16,"pl":1448,"ct":48519,"b":"OUTROS"},{"n":"TARPON GT 90 FUNDO DE INVESTIMENTO FINANCEIRO EM COTAS DE FUNDOS DE INVESTIMENTO EM AÇÕES","c":"Ações","r":8.3,"cdi":57,"v":25.5,"pl":929,"ct":10461,"b":"Não se aplica"},{"n":"TARPON GT FUNDO DE INVESTIMENTO FINANCEIRO EM COTAS DE FUNDOS DE INVESTIMENTO EM AÇÕES","c":"Ações","r":8.27,"cdi":57,"v":25.5,"pl":438,"ct":6875,"b":"Não se aplica"},{"n":"BB AÇÕES GLOBAIS FIC FIF EM AÇÕES RESPONSABILIDADE LIMITADA","c":"Ações","r":3.4,"cdi":23,"v":17.5,"pl":579,"ct":9626,"b":"OUTROS"},{"n":"IP PARTICIPAÇÕES FIC DE FIF EM AÇÕES - RESPONSABILIDADE LIMITADA","c":"Ações","r":0.99,"cdi":7,"v":9.8,"pl":501,"ct":525,"b":"Índice de Preços ao Consumidor Amplo (IPCA/IBGE)"},{"n":"IP PARTICIPAÇÕES IPG FIC DE FIF EM AÇÕES - RESPONSABILIDADE LIMITADA","c":"Ações","r":0.92,"cdi":6,"v":9.9,"pl":541,"ct":23325,"b":"IBrX"},{"n":"BB AÇÕES TECNOLOGIA FUNDO DE INVESTIMENTO FINANCEIRO RESPONSABILIDADE LIMITADA","c":"Ações","r":-0.11,"cdi":-1,"v":21.1,"pl":382,"ct":14183,"b":"Ibovespa"},{"n":"ARBOR FUNDO DE INVESTIMENTO EM COTAS DE FUNDOS DE INVESTIMENTO DE AÇÕES","c":"Ações","r":-0.41,"cdi":-3,"v":17.1,"pl":308,"ct":2853,"b":"Não se aplica"},{"n":"CAIXA SMALL CAPS ATIVO FUNDO DE INVESTIMENTO FINANCEIRO EM AÇÕES - RESPONSABILIDADE LIMITADA","c":"Ações","r":-1.59,"cdi":-11,"v":21.3,"pl":466,"ct":3281,"b":"OUTROS"},{"n":"REAL INVESTOR FIC DE FUNDOS DE INVESTIMENTO FINANCEIRO EM AÇÕES - RESPONSABILIDADE LIMITADA","c":"Ações","r":-2.46,"cdi":-17,"v":23.5,"pl":2420,"ct":29853,"b":"Ibovespa"},{"n":"ALASKA INSTITUCIONAL LONG ONLY FUNDO DE INVESTIMENTO FINANCEIRO EM AÇÕES","c":"Ações","r":-2.68,"cdi":-18,"v":32.8,"pl":851,"ct":34114,"b":""},{"n":"BB AÇÕES BB FUNDO DE INVESTIMENTO FINANCEIRO RESPONSABILIDADE LIMITADA","c":"Ações","r":-3.06,"cdi":-21,"v":34.5,"pl":352,"ct":29531,"b":"OUTROS"},{"n":"BB AÇÕES SELEÇÃO FATORIAL FUNDO DE INVESTIMENTO EM COTAS DE FIF RESPONSABILIDADE LIMITADA","c":"Ações","r":-3.56,"cdi":-24,"v":22.9,"pl":535,"ct":13319,"b":"OUTROS"},{"n":"4UM SMALL CAPS FIF - CLASSE DE INVESTIMENTO EM AÇÕES - RESP LIMITADA","c":"Ações","r":-4.37,"cdi":-30,"v":20.6,"pl":471,"ct":559,"b":"Ibovespa"},{"n":"BTG PACTUAL ABSOLUTO INSTITUCIONAL FUNDO DE INVESTIMENTO FINANCEIRO EM COTAS DE FI EM AÇÕES","c":"Ações","r":-4.91,"cdi":-34,"v":18,"pl":546,"ct":924,"b":""},{"n":"ALPHAKEY LONG SHORT PLUS FUNDO DE INVESTIMENTO EM COTAS DE FUNDOS DE INVESTIMENTO EM AÇÕES","c":"Ações","r":-5.24,"cdi":-36,"v":10.4,"pl":388,"ct":1143,"b":"Não se aplica"},{"n":"CHARLES RIVER FUNDO DE INVESTIMENTO FINANCEIRO DE AÇÕES","c":"Ações","r":-5.99,"cdi":-41,"v":16.1,"pl":907,"ct":5691,"b":""},{"n":"AZ QUEST SMALL MID CAPS FUNDO DE INVESTIMENTO FINANCEIRO DA CIC EM AÇÕES RESP LIMITADA","c":"Ações","r":-6.01,"cdi":-41,"v":22.2,"pl":865,"ct":1576,"b":"OUTROS"},{"n":"PORTO SFA FUNDO DE INVESTIMENTO FINANCEIRO EM COTAS DE FUNDOS DE INVESTIMENTO EM AÇÕES","c":"Ações","r":-6.08,"cdi":-42,"v":15.3,"pl":373,"ct":683,"b":"Não se aplica"},{"n":"ITAÚ INDEX US TECH FIF CIC EM AÇÕES RESPONSABILIDADE LIMITADA","c":"Ações","r":-6.24,"cdi":-43,"v":27.3,"pl":1185,"ct":18773,"b":"Não se aplica"},{"n":"CAIXA AÇÕES MULTIGESTOR FUNDO DE INVESTIMENTO EM COTAS DE CLASSE DE FIF EM AÇÕES - RESP LIMITADA","c":"Ações","r":-6.26,"cdi":-43,"v":20.1,"pl":311,"ct":641,"b":"Não se aplica"},{"n":"AT ADVISORY II FUNDO DE INVESTIMENTO EM COTAS DE AÇÕES","c":"Ações","r":-6.34,"cdi":-43,"v":12.9,"pl":326,"ct":955,"b":"Não se aplica"},{"n":"SPX FALCON 2 FIF CIC EM AÇÕES RESPONSABILIDADE LIMITADA","c":"Ações","r":-6.55,"cdi":-45,"v":15.7,"pl":730,"ct":3784,"b":"Índice de Preços ao Consumidor Amplo (IPCA/IBGE)"},{"n":"BB AÇÕES BOLSA AMERICANA FIF RESPONSABILISADE LIMITADA","c":"Ações","r":-7.04,"cdi":-48,"v":19.4,"pl":1758,"ct":21345,"b":"OUTROS"},{"n":"TREND S\u0026P 500 BRL CLASSE DE INVESTIMENTO EM AÇÕES - RESPONSABILIDADE LIMITADA","c":"Ações","r":-7.08,"cdi":-49,"v":20.1,"pl":485,"ct":22028,"b":"Não se aplica"},{"n":"ITAÚ INDEX AÇÕES ESTRATÉGIA S\u0026P500 ® FIF DA CLASSE DE INVESTIMENTO EM COTAS RESP LIMITADA","c":"Ações","r":-7.43,"cdi":-51,"v":20.6,"pl":661,"ct":10383,"b":"OUTROS"},{"n":"ITAÚ PRIVATE AÇÕES SP 500 BRL II FIF DA CLASSE DE INVESTIMENTO EM COTAS EM AÇÕES RESP LIMITADA","c":"Ações","r":-7.56,"cdi":-52,"v":20.8,"pl":429,"ct":508,"b":"OUTROS"},{"n":"ITAÚ PRIVATE AQUILA AÇÕES FIF DA CLASSE DE INVESTIMENTO EM COTAS RESP LIMITADA","c":"Ações","r":-8.03,"cdi":-55,"v":15.9,"pl":506,"ct":905,"b":"Ibovespa"},{"n":"CONSTÂNCIA FUNDAMENTO FUNDO DE INVESTIMENTO FINANCEIRO - CLASSE DE INVESTIMENTO EM AÇÕES - RESPONSAB","c":"Ações","r":-8.25,"cdi":-57,"v":24.1,"pl":906,"ct":1268,"b":"Ibovespa"},{"n":"ABSOLUTE PACE LONG BIASED FI EM COTAS DE FUNDOS DE INVESTIMENTO FINANCEIRO EM AÇÕES","c":"Ações","r":-8.68,"cdi":-60,"v":15.4,"pl":1507,"ct":6156,"b":""},{"n":"IBIUNA EQUITIES FIF - CLASSE DE INVESTIMENTO EM COTAS DE AÇÕES - RESP LIMITADA","c":"Ações","r":-8.82,"cdi":-61,"v":24.2,"pl":341,"ct":2692,"b":"IBrX"},{"n":"ABSOLUTE PACE LONG BIASED ADVISORY FI FINANCEIRO EM COTAS DE FUNDOS DE INVESTIMENTO EM AÇÕES","c":"Ações","r":-8.84,"cdi":-61,"v":15.4,"pl":671,"ct":7837,"b":"Não se aplica"},{"n":"GUEPARDO INSTITUCIONAL FUNDO DE INVESTIMENTO FINANCEIRO EM COTAS DE FUNDOS DE INVESTIMENTO EM AÇÕES","c":"Ações","r":-9.17,"cdi":-63,"v":20.7,"pl":2214,"ct":15816,"b":"Não se aplica"},{"n":"TREND TECNOLOGIA AMERICANA CLASSE DE INVESTIMENTO EM AÇÕES - RESPONSABILIDADE LIMITADA","c":"Ações","r":-9.47,"cdi":-65,"v":34.8,"pl":323,"ct":22047,"b":"Não se aplica"},{"n":"ITAÚ PRIVATE MULTI AÇÕES FIF DA CLASSE DE INVESTIMENTO EM COTAS RESPONSABILIDADE LIMITADA","c":"Ações","r":-9.53,"cdi":-65,"v":19,"pl":1174,"ct":1997,"b":"Ibovespa"},{"n":"BB AÇÕES BOLSAS GLOBAIS ATIVO FIC FIF RESPONSABILIDADE LIMITADA","c":"Ações","r":-9.71,"cdi":-67,"v":23.2,"pl":452,"ct":31145,"b":"OUTROS"},{"n":"CAIXA VALE DO RIO DOCE FUNDO DE INVESTIMENTO FINANCEIRO EM AÇÕES - RESPONSABILIDADE LIMITADA","c":"Ações","r":-9.75,"cdi":-67,"v":48.3,"pl":646,"ct":12522,"b":""},{"n":"BB AÇÕES VALE FUNDO DE INVESTIMENTO FINANCEIRO RESPONSABILIDADE LIMITADA","c":"Ações","r":-9.78,"cdi":-67,"v":47.9,"pl":612,"ct":19206,"b":"OUTROS"},{"n":"BB CAMBIAL DOLAR LONGO PRAZO VIP FIC FIF RESPONSABILIDADE LIMITADA","c":"Cambial","r":8.1,"cdi":56,"v":5.4,"pl":454,"ct":783,"b":"Dólar comercial"}];
+const CDI12 = 14.57;
+let sortA={k:'ey',d:-1}, sortF={k:'pvp',d:1}, sortU={k:'ey',d:-1}, sortD={k:'r',d:-1}, tab='a';
+
+const med=a=>{if(!a.length)return 0;const s=[...a].sort((x,y)=>x-y);return s[Math.floor(s.length/2)]};
+const f1=n=>(Math.round(n*10)/10).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1});
+const f2=n=>n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+// Mostra o erro NA TELA. Sem isto, qualquer exceção deixa a página em branco e
+// o problema fica invisível — foi exatamente o que aconteceu.
+function erro(onde,e){
+  console.error(onde,e);
+  let b=document.getElementById('errbox');
+  if(!b){ b=document.createElement('div'); b.id='errbox';
+    b.style.cssText='background:#5a1b1b;color:#ffd9d9;border:1px solid #a33;border-radius:10px;padding:12px 15px;margin:0 0 16px;font-size:13px;font-family:monospace;white-space:pre-wrap';
+    const w=document.querySelector('.wrap'); w.insertBefore(b,w.children[2]); }
+  b.textContent+=`[${onde}] ${e && e.message ? e.message : e}\n`;
+}
+// Cada aba renderiza sozinha, protegida. Antes, um erro em qualquer ponto
+// derrubava o script inteiro e a outra aba parava de responder junto.
+function guard(nome,fn){ try{ fn() }catch(e){ erro(nome,e) } }
+
+const feito={f:false,r:false,c:false,u:false,d:false};
+function setTab(t){
+  try{
+    tab=t;
+    ['a','f','r','u','d','c'].forEach(k=>{
+      document.getElementById('pane-'+k).style.display = (k===t?'':'none');
+      document.getElementById('tab-'+k).classList.toggle('on',k===t);
+    });
+    if(t==='u' && !feito.u){ feito.u=true; guard('EUA',renderU); }
+    if(t==='d' && !feito.d){ feito.d=true; guard('Fundos',renderD); }
+    // Cada aba renderiza na primeira abertura, isolada: se uma falhar, as
+    // outras seguem funcionando.
+    if(t==='f' && !feito.f){ feito.f=true; guard('FIIs',renderF); }
+    if(t==='r' && !feito.r){ feito.r=true; guard('Renda fixa',renderRF); }
+    if(t==='c' && !feito.c){ feito.c=true; guard('carteira', ()=>{
+      idxCarteira();
+      mudouTipo();
+      // Recupera as posições da última visita — ficam só neste navegador.
+      try{ const s=localStorage.getItem('carteira2');
+        if(s){ POS=JSON.parse(s)||[] } }catch(e){ POS=[] }
+      analisarCarteira();
+    }); }
+  }catch(e){ erro('troca de aba',e) }
+}
+function srt(w,k){
+  if(w==='a'){ sortA.d=sortA.k===k?-sortA.d:-1; sortA.k=k; guard('ordenar ações',render) }
+  else if(w==='u'){ sortU.d=sortU.k===k?-sortU.d:-1; sortU.k=k; guard('ordenar EUA',renderU) }
+  else if(w==='d'){ sortD.d=sortD.k===k?-sortD.d:-1; sortD.k=k; guard('ordenar fundos',renderD) }
+  else { sortF.d=sortF.k===k?-sortF.d:1; sortF.k=k; guard('ordenar FIIs',renderF) } }
+
+function top5D(d){
+  if(d.length<2) return d.map(r=>({...r,sc:0}));
+  const w=['q1','q2','q3','q4','q5'].map(i=>+document.getElementById(i).value||0);
+  const tw=w.reduce((a,b)=>a+b,0)||1;
+  // Retorno por risco: o quanto de retorno cada ponto de oscilação entregou.
+  // Fundo sem volatilidade calculada fica com o pior valor do grupo em vez de
+  // ser premiado por ausência de dado.
+  const rr=r=> (r.v && r.v>0) ? r.r/r.v : -999;
+  const nR=nrm(d,r=>r.r), nRR=nrm(d,rr), nV=nrm(d,r=>r.v==null?999:r.v,true),
+        nP=nrm(d,r=>Math.log10(Math.max(r.pl,1))), nC=nrm(d,r=>Math.log10(Math.max(r.ct,1)));
+  return d.map(r=>({...r, sc:100*(w[0]*nR(r)+w[1]*nRR(r)+w[2]*nV(r)+w[3]*nP(r)+w[4]*nC(r))/tw,
+    det:detalhe([
+      {rot:'Retorno 12m',    n:nR(r),  peso:w[0], val:f1(r.r)+'%'},
+      {rot:'Retorno/risco',  n:nRR(r), peso:w[1], val:(r.v&&r.v>0)?f2(r.r/r.v):'sem vol.'},
+      {rot:'Baixa volatilid.',n:nV(r), peso:w[2], val:r.v==null?'n/d':f1(r.v)+'%'},
+      {rot:'Escala (PL)',    n:nP(r),  peso:w[3], val:'R$ '+r.pl.toLocaleString('pt-BR')+' mi'},
+      {rot:'Cotistas',       n:nC(r),  peso:w[4], val:(r.ct/1000).toFixed(0)+'k'}])}))
+          .sort((a,b)=>b.sc-a.sc);
+}
+function top5U(d){
+  const v=d.filter(r=>r.ey!=null);
+  if(v.length<2) return v.map(r=>({...r,sc:0}));
+  const w=['e1','e2','e3','e4','e5'].map(i=>+document.getElementById(i).value||0);
+  const tw=w.reduce((a,b)=>a+b,0)||1;
+  // ROE de tecnologia passa de 100% por recompra de ações, não por operação
+  // melhor. Teto em 60 evita que isso domine o score sozinho.
+  const nE=nrm(v,r=>r.ey), nR=nrm(v,r=>Math.min(r.roe==null?0:r.roe,60)),
+        nM=nrm(v,r=>r.mg==null?0:r.mg), nB=nrm(v,r=>r.be==null?1:r.be,true),
+        nD=nrm(v,r=>r.dy==null?0:r.dy);
+  return v.map(r=>({...r, sc:100*(w[0]*nE(r)+w[1]*nR(r)+w[2]*nM(r)+w[3]*nB(r)+w[4]*nD(r))/tw,
+    det:detalhe([
+      {rot:'Lucro/preço',   n:nE(r), peso:w[0], val:f1(r.ey)+'%'},
+      {rot:'ROE',           n:nR(r), peso:w[1], val:r.roe==null?'n/d':f1(r.roe)+'%'+(r.roe>60?' (teto 60)':'')},
+      {rot:'Margem',        n:nM(r), peso:w[2], val:r.mg==null?'n/d':f1(r.mg)+'%'},
+      {rot:'Baixa oscilação',n:nB(r),peso:w[3], val:r.be==null?'n/d':'beta '+f2(r.be)},
+      {rot:'Dividendos',    n:nD(r), peso:w[4], val:r.dy==null?'—':f2(r.dy)+'%'}])}))
+          .sort((a,b)=>b.sc-a.sc);
+}
+
+function renderD(){
+  const cl=document.getElementById('d-cl').value;
+  const mr=+document.getElementById('d-ret').value, mv=+document.getElementById('d-vol').value;
+  const mp=+document.getElementById('d-pl').value;
+  const d=(FUNDOS||[]).filter(x=>x.c===cl && x.r>=mr && (x.v==null||x.v<=mv) && x.pl>=mp);
+  const nd='<span style="color:var(--dim)">—</span>';
+
+  document.getElementById('d1').textContent=d.length;
+  document.getElementById('d1n').textContent=cl;
+  document.getElementById('d2').textContent=CDI12!=null?f1(CDI12)+'%':'—';
+  document.getElementById('d3').textContent=d.length?f1(med(d.map(x=>x.r)))+'%':'—';
+  const ac=d.filter(x=>x.cdi!=null&&x.cdi>=100).length;
+  document.getElementById('d4').textContent=ac;
+  document.getElementById('d4n').textContent=d.length?`de ${d.length} no grupo`:'';
+
+  cards('t5d', top5D(d), r=>`<dt>Retorno 12m</dt><dd>${f1(r.r)}%</dd>
+    <dt>% do CDI</dt><dd>${r.cdi==null?'—':r.cdi+'%'}</dd>
+    <dt>Volatilidade</dt><dd>${r.v==null?'—':f1(r.v)+'%'}</dd>
+    <dt>Retorno/risco</dt><dd>${r.v?f2(r.r/r.v):'—'}</dd>
+    <dt>PL</dt><dd>R$ ${r.pl.toLocaleString('pt-BR')} mi</dd>`);
+
+  // Dispersão: risco no eixo X, retorno no Y. A linha do CDI separa quem bateu
+  // a renda fixa básica de quem não bateu — mas só faz sentido junto com o eixo X.
+  const W=640,H=340,P={l:46,r:14,t:14,b:38};
+  const sv=document.getElementById('d-sc');
+  if(!d.length){ sv.innerHTML=''; document.getElementById('d-bar').innerHTML='';
+    document.querySelector('#td tbody').innerHTML=''; return }
+  const vs=d.map(x=>x.v==null?0:x.v), rs=d.map(x=>x.r);
+  const xm=Math.max(5,Math.max(...vs))*1.08;
+  const ymin=Math.min(0,Math.min(...rs))*1.1, ymax=Math.max(...rs,CDI12||0)*1.12;
+  const X=v=>P.l+(v/xm)*(W-P.l-P.r);
+  const Y=v=>H-P.b-((v-ymin)/(ymax-ymin))*(H-P.t-P.b);
+  let g='';
+  for(let i=0;i<=4;i++){ const v=ymin+(ymax-ymin)*i/4, y=Y(v);
+    g+=`<line x1="${P.l}" y1="${y}" x2="${W-P.r}" y2="${y}" stroke="var(--line)"/>
+        <text x="${P.l-7}" y="${y+4}" text-anchor="end" font-size="10" fill="var(--dim)">${v.toFixed(0)}</text>`}
+  for(let i=0;i<=4;i++){ const v=xm*i/4, x=X(v);
+    g+=`<text x="${x}" y="${H-P.b+15}" text-anchor="middle" font-size="10" fill="var(--dim)">${v.toFixed(0)}%</text>`}
+  if(CDI12!=null && CDI12>=ymin && CDI12<=ymax){
+    g+=`<line x1="${P.l}" y1="${Y(CDI12)}" x2="${W-P.r}" y2="${Y(CDI12)}" stroke="var(--accent2)" stroke-dasharray="5 4" stroke-width="2"/>
+        <text x="${W-P.r-4}" y="${Y(CDI12)-6}" text-anchor="end" font-size="10.5" font-weight="700" fill="var(--accent2)">CDI ${f1(CDI12)}%</text>`}
+  g+=`<text x="${W/2}" y="${H-4}" text-anchor="middle" font-size="11" fill="var(--dim)">volatilidade anualizada (%)</text>
+      <text x="12" y="${H/2}" text-anchor="middle" font-size="11" fill="var(--dim)" transform="rotate(-90 12 ${H/2})">retorno 12m (%)</text>`;
+  const plm=Math.max(...d.map(x=>x.pl));
+  d.forEach(x=>{ const rr=4+9*Math.sqrt(x.pl/(plm||1));
+    const cor = (CDI12!=null && x.r>=CDI12) ? 'var(--pos)' : 'var(--accent)';
+    g+=`<circle cx="${X(x.v==null?0:x.v)}" cy="${Y(x.r)}" r="${rr}" fill="${cor}" fill-opacity=".4" stroke="${cor}"><title>${x.n}
+retorno ${f1(x.r)}% · vol ${x.v==null?'n/d':f1(x.v)+'%'} · PL R$ ${x.pl.toLocaleString('pt-BR')} mi</title></circle>`});
+  sv.innerHTML=g;
+
+  // Barras dos maiores retornos
+  const rows=[...d].sort((a,b)=>b.r-a.r).slice(0,12);
+  const BW=420,BH=340,BP={l:150,r:44,t:8,b:8},bh=(BH-BP.t-BP.b)/rows.length;
+  const mxr=Math.max(...rows.map(r=>Math.abs(r.r)))||1;
+  let gb='';
+  rows.forEach((r,i)=>{ const y=BP.t+i*bh+bh*0.16, h=bh*0.68;
+    const w=(Math.abs(r.r)/mxr)*(BW-BP.l-BP.r);
+    const cor=(CDI12!=null&&r.r>=CDI12)?'var(--pos)':'var(--accent)';
+    const nome=curto(r.n,26);
+    gb+=`<rect x="${BP.l}" y="${y}" width="${Math.max(w,1)}" height="${h}" rx="2" fill="${cor}" fill-opacity=".8"><title>${r.n}: ${f1(r.r)}%</title></rect>
+      <text x="${BP.l-6}" y="${y+h/2+4}" text-anchor="end" font-size="9.5" font-weight="600" fill="var(--ink)">${nome}</text>
+      <text x="${BP.l+w+5}" y="${y+h/2+4}" font-size="10" fill="var(--dim)">${f1(r.r)}%</text>`});
+  document.getElementById('d-bar').innerHTML=gb;
+
+  const s=[...d].sort((a,b)=>{ const A=a[sortD.k],B=b[sortD.k];
+    if(A==null) return 1; if(B==null) return -1;
+    return (typeof A==='string'?A.localeCompare(B):A-B)*sortD.d});
+  document.querySelector('#td tbody').innerHTML=s.map(x=>
+    `<tr><td class="tk" style="font-weight:500;font-size:12px" title="${x.n.replace(/"/g,'')}">${curto(x.n,52)}</td>
+     <td class="${CDI12!=null&&x.r>=CDI12?'pos':''}">${f1(x.r)}</td>
+     <td>${x.cdi==null?nd:x.cdi+'%'}</td>
+     <td class="${x.v!=null&&x.v>25?'neg':''}">${x.v==null?nd:f1(x.v)}</td>
+     <td>${x.pl.toLocaleString('pt-BR')}</td><td>${x.ct.toLocaleString('pt-BR')}</td></tr>`).join('');
+}
+
+function renderU(){
+  const d=EUA||[];
+  const nd='<span style="color:var(--dim)">—</span>';
+  document.getElementById('u1').textContent=d.length;
+  document.getElementById('u1n').textContent=d.filter(r=>r.pl!=null).length+' com fundamento';
+  const ey=d.filter(r=>r.ey!=null).map(r=>r.ey), roe=d.filter(r=>r.roe!=null).map(r=>r.roe);
+  document.getElementById('u2').textContent=ey.length?f1(med(ey))+'%':'—';
+  document.getElementById('u3').textContent=roe.length?f1(med(roe))+'%':'—';
+  const dol=RF&&RF.macro&&RF.macro.dolar?RF.macro.dolar.v:null;
+  document.getElementById('u4').textContent=dol?('R$ '+f2(dol)):'—';
+  cards('t5u', top5U(d), r=>`<dt>L/P</dt><dd>${f1(r.ey)}%</dd>
+    <dt>P/L</dt><dd>${r.pl==null?'—':f1(r.pl)}</dd>
+    <dt>ROE</dt><dd>${r.roe==null?'—':f1(r.roe)+'%'}</dd>
+    <dt>Margem</dt><dd>${r.mg==null?'—':f1(r.mg)+'%'}</dd>
+    <dt>Beta</dt><dd>${r.be==null?'—':f2(r.be)}</dd>`);
+  const s=[...d].sort((a,b)=>{
+    const A=a[sortU.k],B=b[sortU.k];
+    if(A==null) return 1; if(B==null) return -1;
+    return (typeof A==='string'?A.localeCompare(B):A-B)*sortU.d});
+  const c=(v,dec,suf)=> v==null ? nd : (dec===1?f1(v):f2(v))+(suf||'');
+  document.querySelector('#tu tbody').innerHTML=s.map(r=>
+    `<tr><td class="tk" title="${r.n}">${r.t}</td><td>${f2(r.p)}</td>
+     <td>${c(r.ey,1)}</td><td>${c(r.pl,1)}</td><td>${c(r.pvp,1)}</td>
+     <td>${c(r.roe,1)}</td><td>${c(r.mg,1)}</td><td>${c(r.dy,2)}</td>
+     <td class="${r.be!=null&&r.be>1.5?'neg':''}">${c(r.be,2)}</td><td>${c(r.ee,1)}</td></tr>`).join('');
+}
+
+function filtA(){
+  const req=+document.getElementById('req').value||12;
+  const md=+document.getElementById('mdiv').value, mp=+document.getElementById('mpo').value;
+  const ma=+document.getElementById('mal').value, sc=document.getElementById('sec').value;
+  return ACOES.filter(r=>r.de<=md && r.po<=mp && r.po>=0 && r.al>=ma && (!sc||r.s===sc))
+    .map(r=>({...r, tt2:+(r.lu*1e9/(r.lu*1e9/r.p*(r.ey/100))/(req/100)).toFixed(2),
+                    dsc:+(((r.ey/req)-1)*100).toFixed(0)}));
+}
+// Normaliza 0–1 dentro do conjunto FILTRADO. O score é relativo aos aprovados
+// de hoje: mudar o filtro muda a régua, e é isso que se quer — comparar entre
+// os que passaram, não contra um padrão absoluto que não existe.
+function nrm(arr,get,inv){
+  const v=arr.map(get), lo=Math.min(...v), hi=Math.max(...v), sp=hi-lo;
+  return x=>{ if(sp===0) return 0.5; const n=(get(x)-lo)/sp; return inv?1-n:n; };
+}
+function top5A(d){
+  if(d.length<2) return d.map(r=>({...r,sc:0}));
+  const w=['w1','w2','w3','w4','w5'].map(i=>+document.getElementById(i).value||0);
+  const tw=w.reduce((a,b)=>a+b,0)||1;
+  const nEy=nrm(d,r=>r.ey), nRoe=nrm(d,r=>Math.min(r.roe,60)), nAl=nrm(d,r=>r.al),
+        nDe=nrm(d,r=>Math.max(r.de,-1),true), nMl=nrm(d,r=>r.ml);
+  return d.map(r=>({...r, sc:100*(w[0]*nEy(r)+w[1]*nRoe(r)+w[2]*nAl(r)+w[3]*nDe(r)+w[4]*nMl(r))/tw,
+    det:detalhe([
+      {rot:'Lucro/preço',   n:nEy(r),  peso:w[0], val:f1(r.ey)+'%'},
+      {rot:'ROE',           n:nRoe(r), peso:w[1], val:f1(r.roe)+'%'},
+      {rot:'Previsibilidade',n:nAl(r), peso:w[2], val:r.al+'/3 anos'},
+      {rot:'Baixa dívida',  n:nDe(r),  peso:w[3], val:f2(r.de)+'×'},
+      {rot:'Margem líquida',n:nMl(r),  peso:w[4], val:f1(r.ml)+'%'}])}))
+          .sort((a,b)=>b.sc-a.sc);
+}
+function top5F(d){
+  if(d.length<2) return d.map(r=>({...r,sc:0}));
+  const w=['v1','v2','v3','v4','v5'].map(i=>+document.getElementById(i).value||0);
+  const tw=w.reduce((a,b)=>a+b,0)||1;
+  const nDy=nrm(d,r=>r.dy), nPv=nrm(d,r=>r.pvp,true), nTx=nrm(d,r=>r.tx,true),
+        nCt=nrm(d,r=>Math.log10(Math.max(r.ct,1)));
+  // Diversificação usa a concentração REAL por imóvel quando existe; cai para
+  // a concentração por classe de ativo só quando o fundo não tem imóvel.
+  const nCc=nrm(d,r=> r.ci!=null ? r.ci/100 : r.cc, true);
+  // Vacância entra como penalidade, não como eixo: sem dado não pode virar
+  // nota boa nem ruim — vira neutro, e o card avisa "sem dado".
+  const pen=r=> r.vac==null ? 1 : Math.max(0, 1 - Math.min(r.vac,40)/40*0.5);
+  return d.map(r=>({...r, sc:100*pen(r)*(w[0]*nDy(r)+w[1]*nPv(r)+w[2]*nCc(r)+w[3]*nTx(r)+w[4]*nCt(r))/tw,
+    det:detalhe([
+      {rot:'Rendimento',    n:nDy(r), peso:w[0], val:f1(r.dy)+'%'},
+      {rot:'Desconto (P/VP)',n:nPv(r),peso:w[1], val:r.pvp.toFixed(2)},
+      {rot:'Diversificação',n:nCc(r), peso:w[2], val:r.ci!=null?r.ci.toFixed(0)+'% no maior':'por classe'},
+      {rot:'Taxa baixa',    n:nTx(r), peso:w[3], val:f1(r.tx)+'%'},
+      {rot:'Liquidez',      n:nCt(r), peso:w[4], val:(r.ct/1000).toFixed(0)+'k cotistas'}])
+      .concat(r.vac!=null&&r.vac>0?[{rot:'Penalidade vacância',n:pen(r),peso:0,nota:Math.round(pen(r)*100),pts:0,val:f1(r.vac)+'%'}]:[])}))
+          .sort((a,b)=>b.sc-a.sc);
+}
+// Monta o detalhamento do score: nota de cada eixo (0–100), peso, e a
+// contribuição em pontos. É isso que responde "por que este ficou na frente".
+function detalhe(eixos){
+  const tw=eixos.reduce((s,e)=>s+e.peso,0)||1;
+  return eixos.map(e=>({...e, nota:Math.round(e.n*100), pts:e.n*e.peso/tw*100}));
+}
+function htmlDetalhe(r){
+  if(!r.det) return '';
+  const fortes=[...r.det].sort((a,b)=>b.pts-a.pts).filter(e=>e.peso>0);
+  const alto=fortes[0], baixo=[...fortes].reverse().find(e=>e.nota<50);
+  const linhas=r.det.filter(e=>e.peso>0).map(e=>
+    `<div style="display:grid;grid-template-columns:118px 1fr 74px;gap:8px;align-items:center;margin:5px 0;font-size:12px">
+      <div style="color:var(--dim)">${e.rot}</div>
+      <div style="background:var(--line);border-radius:3px;height:9px;overflow:hidden">
+        <div style="width:${e.nota}%;height:100%;background:${e.nota>=66?'var(--pos)':e.nota>=33?'var(--accent)':'var(--neg)'}"></div></div>
+      <div style="text-align:right;font-variant-numeric:tabular-nums">${e.val} <span style="color:var(--dim)">·${e.nota}</span></div>
+    </div>`).join('');
+  const resumo = alto
+    ? `Subiu principalmente por <b>${alto.rot.toLowerCase()}</b>${baixo&&baixo!==alto?`; o que puxou para baixo foi <b>${baixo.rot.toLowerCase()}</b>`:''}.`
+    : '';
+  return `<div class="det" style="display:none">
+    <div style="font-size:11px;color:var(--dim);margin-bottom:7px">NOTA POR CRITÉRIO (0–100), RELATIVA AO GRUPO</div>
+    ${linhas}
+    <div style="font-size:12px;margin-top:9px;line-height:1.5">${resumo}</div>
+    <div style="font-size:11.5px;color:var(--dim);margin-top:7px;line-height:1.5">
+      As notas comparam este ativo <b>com os outros que passaram no filtro</b>, não com um padrão absoluto.
+      Nota 100 significa o melhor do grupo naquele critério — o grupo inteiro pode ser ruim.</div>
+  </div>`;
+}
+function toggleDet(el){
+  const d=el.querySelector('.det'); if(!d) return;
+  const abrir = d.style.display==='none';
+  // Só um aberto por vez: dois popovers sobrepostos ficam ilegíveis.
+  document.querySelectorAll('.t5.aberto').forEach(o=>{
+    if(o!==el){ o.classList.remove('aberto'); const dd=o.querySelector('.det');
+      if(dd) dd.style.display='none';
+      const m=o.querySelector('.mais'); if(m) m.textContent='por que este?'; }
+  });
+  d.style.display = abrir?'block':'none';
+  el.classList.toggle('aberto',abrir);
+  el.querySelector('.mais').textContent = abrir?'fechar ✕':'por que este?';
+}
+// Clique fora fecha o popover aberto.
+document.addEventListener('click', ev=>{
+  if(ev.target.closest('.t5')) return;
+  document.querySelectorAll('.t5.aberto').forEach(o=>{
+    o.classList.remove('aberto');
+    const d=o.querySelector('.det'); if(d) d.style.display='none';
+    const m=o.querySelector('.mais'); if(m) m.textContent='por que este?';
+  });
+});
+// Nome de fundo vem cheio de jargão de registro que não identifica nada:
+// "FUNDO DE INVESTIMENTO FINANCEIRO EM COTAS DE FUNDOS DE INVESTIMENTO
+// RESPONSABILIDADE LIMITADA". Sobra o gestor e a estratégia, que é o que importa.
+const LIXO=[
+  /RESPONSABILIDADE LIMITADA/gi, /CLASSE [ÚU]NICA D[EO]/gi, /CLASSE DE INVESTIMENTO/gi,
+  /FUNDO DE INVESTIMENTO FINANCEIRO/gi, /FUNDO DE INVESTIMENT[OS]*/gi,
+  /\bEM COTAS DE FUNDOS?\b/gi, /\bEM COTAS\b/gi, /\bDE FUNDOS?\b/gi,
+  /\bFIC\b/gi, /\bFIF\b/gi, /\bFI\b/gi, /\bCIC\b/gi, /\bDE\b\s*$/gi
+];
+function curto(nome,max){
+  let s=nome||'';
+  LIXO.forEach(rx=>{ s=s.replace(rx,' ') });
+  s=s.replace(/\s+/g,' ').replace(/[\s\-–,]+$/,'').trim();
+  if(!s) s=nome;
+  return s.length>max ? s.slice(0,max-1).trim()+'…' : s;
+}
+function cards(el,rows,linhas){
+  document.getElementById(el).innerHTML=rows.slice(0,5).map((r,i)=>
+    // Fundo não tem ticker: cai para o nome. Era a origem do "undefined".
+    `<div class="t5" onclick="toggleDet(this)" style="cursor:pointer" title="Clique para ver por que este ficou nesta posição">
+       <div class="r">${i+1}º</div>
+       <div class="t${r.t?'':' longo'}" title="${(r.n||r.t||'').replace(/"/g,'')}">${r.t||curto(r.n,30)}</div>
+       <div class="sc">score ${r.sc.toFixed(0)}/100</div><dl>${linhas(r)}</dl>
+       <div class="mais" style="margin-top:9px;font-size:11.5px;font-weight:700;color:var(--accent)">por que este?</div>
+       ${htmlDetalhe(r)}
+     </div>`).join('')
+    || '<div class="cs">Nenhum ativo passa nos filtros atuais.</div>';
+}
+
+function render(){
+  const d=filtA(), req=+document.getElementById('req').value||12;
+  cards('t5a', top5A(d), r=>`<dt>L/P</dt><dd>${f1(r.ey)}%</dd><dt>ROE</dt><dd>${f1(r.roe)}%</dd>
+    <dt>Payout</dt><dd>${r.po}%</dd><dt>Dív/EBITDA</dt><dd>${f2(r.de)}</dd>
+    <dt>Anos c/ lucro</dt><dd>${r.al}/3</dd>`);
+  document.getElementById('k1').textContent=d.length;
+  document.getElementById('k1n').textContent=`de ${ACOES.length} com dado`;
+  document.getElementById('k2').textContent=f1(med(d.map(r=>r.ey)))+'%';
+  document.getElementById('k3').textContent=f1(med(d.map(r=>r.roe)))+'%';
+  const ab=d.filter(r=>r.ey>=req).length;
+  document.getElementById('k4').textContent=ab;
+  document.getElementById('k4n').textContent=`L/P ≥ ${req}%`;
+  scatter(d); bars(d);
+  const s=[...d].sort((a,b)=>{const A=a[sortA.k],B=b[sortA.k];
+    return (typeof A==='string'?A.localeCompare(B):A-B)*sortA.d});
+  document.querySelector('#ta tbody').innerHTML=s.map(r=>{
+    const teto=r.p*(r.ey/req);
+    const dist=((teto/r.p)-1)*100;
+    return `<tr><td class="tk">${r.t}</td><td>${f2(r.p)}</td><td>${f1(r.ey)}</td>
+    <td>${f2(teto)}</td><td class="${dist>=0?'pos':'neg'}">${dist>=0?'+':''}${dist.toFixed(0)}</td>
+    <td>${f1(r.roe)}</td><td>${f1(r.ml)}</td><td>${r.po}</td>
+    <td class="${r.de<=0?'pos':''}">${f2(r.de)}</td><td>${f2(r.lu)}</td><td>${r.al}</td></tr>`}).join('');
+}
+function scatter(d){
+  if(!d.length){document.getElementById('sc').innerHTML='';return}
+  const W=640,H=340,P={l:46,r:14,t:12,b:38};
+  const xm=Math.max(...d.map(r=>r.ey))*1.05, ym=Math.max(10,Math.max(...d.map(r=>r.roe)))*1.05;
+  const lm=Math.max(...d.map(r=>Math.abs(r.lu)));
+  const X=v=>P.l+(v/xm)*(W-P.l-P.r), Y=v=>H-P.b-(v/ym)*(H-P.t-P.b);
+  let g='';
+  for(let i=0;i<=4;i++){const v=ym*i/4,y=Y(v);
+    g+=`<line x1="${P.l}" y1="${y}" x2="${W-P.r}" y2="${y}" stroke="var(--line)"/>
+        <text x="${P.l-7}" y="${y+4}" text-anchor="end" font-size="10" fill="var(--dim)">${v.toFixed(0)}</text>`}
+  for(let i=0;i<=4;i++){const v=xm*i/4,x=X(v);
+    g+=`<text x="${x}" y="${H-P.b+15}" text-anchor="middle" font-size="10" fill="var(--dim)">${v.toFixed(0)}%</text>`}
+  g+=`<text x="${(W)/2}" y="${H-4}" text-anchor="middle" font-size="11" fill="var(--dim)">lucro/preço (%)</text>
+      <text x="12" y="${H/2}" text-anchor="middle" font-size="11" fill="var(--dim)" transform="rotate(-90 12 ${H/2})">ROE (%)</text>`;
+  d.forEach(r=>{const rr=4+10*Math.sqrt(Math.abs(r.lu)/(lm||1));
+    g+=`<circle cx="${X(r.ey)}" cy="${Y(Math.min(r.roe,ym))}" r="${rr}" fill="var(--accent)" fill-opacity=".45" stroke="var(--accent)"><title>${r.t} · L/P ${f1(r.ey)}% · ROE ${f1(r.roe)}% · lucro R$ ${f2(r.lu)} bi</title></circle>`});
+  d.slice(0,7).forEach(r=>{g+=`<text x="${X(r.ey)+8}" y="${Y(Math.min(r.roe,ym))-8}" font-size="10" font-weight="700" fill="var(--ink)">${r.t}</text>`});
+  document.getElementById('sc').innerHTML=g;
+}
+function bars(d){
+  const req=+document.getElementById('req').value||12;
+  const rows=[...d].map(r=>({t:r.t,v:((r.ey/req)-1)*100})).sort((a,b)=>b.v-a.v).slice(0,14);
+  if(!rows.length){document.getElementById('bar').innerHTML='';return}
+  const W=420,H=340,P={l:56,r:44,t:8,b:8},bh=(H-P.t-P.b)/rows.length;
+  const mx=Math.max(...rows.map(r=>Math.abs(r.v)))||1, zx=P.l+(W-P.l-P.r)*0.32;
+  let g=`<line x1="${zx}" y1="${P.t}" x2="${zx}" y2="${H-P.b}" stroke="var(--line)"/>`;
+  rows.forEach((r,i)=>{const y=P.t+i*bh+bh*0.16,h=bh*0.68;
+    const w=(Math.abs(r.v)/mx)*(r.v>=0?(W-P.r-zx):(zx-P.l));
+    const x=r.v>=0?zx:zx-w;
+    g+=`<rect x="${x}" y="${y}" width="${Math.max(w,1)}" height="${h}" rx="2" fill="${r.v>=0?'var(--pos)':'var(--neg)'}" fill-opacity=".8"><title>${r.t}: ${r.v.toFixed(0)}%</title></rect>
+        <text x="${P.l-5}" y="${y+h/2+4}" text-anchor="end" font-size="10.5" font-weight="600" fill="var(--ink)">${r.t}</text>
+        <text x="${r.v>=0?x+w+4:x-4}" y="${y+h/2+4}" text-anchor="${r.v>=0?'start':'end'}" font-size="10" fill="var(--dim)">${r.v>=0?'+':''}${r.v.toFixed(0)}%</text>`});
+  document.getElementById('bar').innerHTML=g;
+}
+
+function filtF(){
+  const tp=document.getElementById('ftp').value, pv=+document.getElementById('fpvp').value;
+  const dy=+document.getElementById('fdy').value, tx=+document.getElementById('ftx').value;
+  return FIIS.filter(r=>(!tp||r.tp===tp)&&r.pvp<=pv&&r.dy>=dy&&r.tx<=tx);
+}
+function renderF(){
+  const d=filtF();
+  cards('t5f', top5F(d), r=>`<dt>DY ano</dt><dd>${f1(r.dy)}%</dd><dt>P/VP</dt><dd>${r.pvp.toFixed(3)}</dd>
+    <dt>Taxa</dt><dd>${f1(r.tx)}%</dd>
+    <dt>Vacância</dt><dd>${r.vac==null?'sem dado':f1(r.vac)+'%'}</dd>
+    <dt>Maior imóvel</dt><dd>${r.ci==null?'—':r.ci.toFixed(0)+'%'}</dd>`);
+  document.getElementById('f1').textContent=d.length;
+  document.getElementById('f1n').textContent=`de ${FIIS.length} com preço`;
+  document.getElementById('f2').textContent=med(d.map(r=>r.pvp)).toFixed(3);
+  document.getElementById('f3').textContent=f1(med(d.map(r=>r.dy)))+'%';
+  document.getElementById('f4').textContent=f1(med(d.map(r=>r.tx)))+'%';
+  fscatter(d); fbars(d);
+  const s=[...d].sort((a,b)=>{const A=a[sortF.k],B=b[sortF.k];
+    return (typeof A==='string'?A.localeCompare(B):A-B)*sortF.d});
+  // Traço = SEM DADO. FII de papel não tem imóvel, e parte dos fundos não
+  // preenche o campo na CVM. Nunca renderizar como 0.
+  const nd='<span style="color:var(--dim)">—</span>';
+  document.querySelector('#tf tbody').innerHTML=s.map(r=>{
+    const vac = r.vac==null ? nd : `<span class="${r.vac>15?'neg':r.vac>5?'':'pos'}">${f1(r.vac)}</span>`;
+    const ci  = r.ci==null  ? nd : `<span class="${r.ci>60?'neg':''}">${r.ci.toFixed(0)}%</span>`;
+    return `<tr><td class="tk">${r.t}</td><td><span class="pill">${r.tp}</span></td><td>${f2(r.p)}</td>
+     <td>${f2(r.vp)}</td><td class="${r.pvp<1?'pos':''}">${r.pvp.toFixed(3)}</td><td>${f1(r.dy)}</td>
+     <td>${f1(r.tx)}</td><td>${vac}</td><td>${ci}</td><td>${r.ni==null?nd:r.ni}</td>
+     <td>${f2(r.pl)}</td><td>${r.ct.toLocaleString('pt-BR')}</td></tr>`}).join('');
+}
+function fscatter(d){
+  if(!d.length){document.getElementById('fsc').innerHTML='';return}
+  const W=640,H=340,P={l:46,r:14,t:12,b:38};
+  const xm=Math.max(1.2,Math.max(...d.map(r=>r.pvp))*1.05), ym=Math.max(6,Math.max(...d.map(r=>r.dy))*1.1);
+  const pm=Math.max(...d.map(r=>r.pl));
+  const X=v=>P.l+(v/xm)*(W-P.l-P.r), Y=v=>H-P.b-(v/ym)*(H-P.t-P.b);
+  let g='';
+  for(let i=0;i<=4;i++){const v=ym*i/4,y=Y(v);
+    g+=`<line x1="${P.l}" y1="${y}" x2="${W-P.r}" y2="${y}" stroke="var(--line)"/>
+        <text x="${P.l-7}" y="${y+4}" text-anchor="end" font-size="10" fill="var(--dim)">${v.toFixed(0)}%</text>`}
+  for(let i=0;i<=4;i++){const v=xm*i/4,x=X(v);
+    g+=`<text x="${x}" y="${H-P.b+15}" text-anchor="middle" font-size="10" fill="var(--dim)">${v.toFixed(2)}</text>`}
+  g+=`<line x1="${X(1)}" y1="${P.t}" x2="${X(1)}" y2="${H-P.b}" stroke="var(--dim)" stroke-dasharray="4 3"/>
+      <text x="${X(1)+5}" y="${P.t+12}" font-size="10" fill="var(--dim)">P/VP = 1</text>
+      <text x="${W/2}" y="${H-4}" text-anchor="middle" font-size="11" fill="var(--dim)">P/VP</text>
+      <text x="12" y="${H/2}" text-anchor="middle" font-size="11" fill="var(--dim)" transform="rotate(-90 12 ${H/2})">DY ano (%)</text>`;
+  d.forEach(r=>{const rr=4+10*Math.sqrt(r.pl/(pm||1));
+    g+=`<circle cx="${X(r.pvp)}" cy="${Y(Math.min(r.dy,ym))}" r="${rr}" fill="var(--accent)" fill-opacity=".45" stroke="var(--accent)"><title>${r.t} · P/VP ${r.pvp.toFixed(3)} · DY ${f1(r.dy)}% · PL R$ ${f2(r.pl)} bi</title></circle>
+        <text x="${X(r.pvp)+7}" y="${Y(Math.min(r.dy,ym))-7}" font-size="9.5" font-weight="700" fill="var(--ink)">${r.t}</text>`});
+  document.getElementById('fsc').innerHTML=g;
+}
+function fbars(d){
+  const rows=[...d].sort((a,b)=>b.cc-a.cc).slice(0,14);
+  if(!rows.length){document.getElementById('fbar').innerHTML='';return}
+  const W=420,H=340,P={l:64,r:40,t:8,b:8},bh=(H-P.t-P.b)/rows.length;
+  let g='';
+  rows.forEach((r,i)=>{const y=P.t+i*bh+bh*0.16,h=bh*0.68,w=r.cc*(W-P.l-P.r);
+    const col=r.cc>0.8?'var(--neg)':r.cc>0.6?'var(--warn)':'var(--pos)';
+    g+=`<rect x="${P.l}" y="${y}" width="${Math.max(w,1)}" height="${h}" rx="2" fill="${col}" fill-opacity=".75"><title>${r.t}: ${r.cc.toFixed(2)}</title></rect>
+        <text x="${P.l-5}" y="${y+h/2+4}" text-anchor="end" font-size="10.5" font-weight="600" fill="var(--ink)">${r.t}</text>
+        <text x="${P.l+w+5}" y="${y+h/2+4}" font-size="10" fill="var(--dim)">${r.cc.toFixed(2)}</text>`});
+  document.getElementById('fbar').innerHTML=g;
+}
+
+// ---------- RENDA FIXA ----------
+// Tabela regressiva de IR, Lei 11.033/2004. LCI, LCA, CRI, CRA e debênture
+// incentivada são isentas para pessoa física.
+const ISENTOS=['LCI','LCA','CRI','CRA','DEB-INC'];
+function aliq(dias){ return dias<=180?.225 : dias<=360?.20 : dias<=720?.175 : .15 }
+
+function renderRF(){
+  const m=RF.macro||{};
+  const set=(id,v,d)=>{ document.getElementById(id).textContent=v;
+    if(d) document.getElementById(id+'-d').textContent='em '+d; };
+  if(m.cdi)   set('r-cdi',   f1(m.cdi.v)+'%',   m.cdi.d);
+  if(m.selic) set('r-selic', f1(m.selic.v)+'%', m.selic.d);
+  if(m.ipca12)set('r-ipca',  f1(m.ipca12.v)+'%',m.ipca12.d);
+  if(m.dolar) set('r-dolar', 'R$ '+f2(m.dolar.v), m.dolar.d);
+
+  // Focus
+  const F=RF.focus||{}, S=F.Selic||[], I=F.IPCA||[];
+  const W=420,H=250,P={l:38,r:12,t:14,b:30};
+  const anos=S.map(x=>x.ano);
+  const mx=Math.max(16,...S.map(x=>x.v),...I.map(x=>x.v));
+  const X=i=>P.l+(anos.length>1?i/(anos.length-1):.5)*(W-P.l-P.r);
+  const Y=v=>H-P.b-(v/mx)*(H-P.t-P.b);
+  let g='';
+  for(let i=0;i<=4;i++){const v=mx*i/4,y=Y(v);
+    g+=`<line x1="${P.l}" y1="${y}" x2="${W-P.r}" y2="${y}" stroke="var(--line)"/>
+        <text x="${P.l-6}" y="${y+4}" text-anchor="end" font-size="10" fill="var(--dim)">${v.toFixed(0)}</text>`}
+  anos.forEach((a,i)=>{ g+=`<text x="${X(i)}" y="${H-P.b+15}" text-anchor="middle" font-size="10" fill="var(--dim)">${a}</text>` });
+  const linha=(arr,cor,nome)=>{
+    if(!arr.length) return '';
+    let d=arr.map((x,i)=>`${i?'L':'M'}${X(i)},${Y(x.v)}`).join(' ');
+    return `<path d="${d}" fill="none" stroke="${cor}" stroke-width="2.5"/>`+
+      arr.map((x,i)=>`<circle cx="${X(i)}" cy="${Y(x.v)}" r="4" fill="${cor}"><title>${nome} ${x.ano}: ${f1(x.v)}%</title></circle>
+        <text x="${X(i)}" y="${Y(x.v)-10}" text-anchor="middle" font-size="10" font-weight="700" fill="${cor}">${f1(x.v)}</text>`).join('');
+  };
+  g+=linha(S,'var(--accent)','Selic')+linha(I,'var(--accent2)','IPCA');
+  g+=`<text x="${W-P.r}" y="${P.t+2}" text-anchor="end" font-size="11" font-weight="700" fill="var(--accent)">Selic</text>
+      <text x="${W-P.r}" y="${P.t+17}" text-anchor="end" font-size="11" font-weight="700" fill="var(--accent2)">IPCA</text>`;
+  document.getElementById('rf-focus').innerHTML=g;
+
+  // Tesouro
+  document.getElementById('rf-td-base').textContent = RF.baseTD?('· base '+RF.baseTD):'';
+  const sel=m.selic?m.selic.v:0, ip=m.ipca12?m.ipca12.v:0;
+  document.querySelector('#rf-td tbody').innerHTML=(RF.tesouro||[]).map(t=>{
+    // Selic paga Selic + spread; IPCA+ paga inflação + taxa; prefixado é a taxa.
+    const tot = /Selic/.test(t.n) ? sel+t.tx : /IPCA/.test(t.n) ? ip+t.tx : t.tx;
+    return `<tr><td>${t.n}</td><td>${t.v}</td><td>${f2(t.tx)}%</td>
+      <td>${f2(t.pu)}</td><td><b>${f2(tot)}%</b></td></tr>`}).join('');
+  calcRF();
+}
+
+function calcRF(){
+  const m=RF.macro||{}; const cdi=m.cdi?m.cdi.v:0, sel=m.selic?m.selic.v:0, ip=m.ipca12?m.ipca12.v:0;
+  const tipo=document.getElementById('rf-tipo').value;
+  const idx=document.getElementById('rf-idx').value;
+  const tx=+document.getElementById('rf-taxa').value||0;
+  const anos=+document.getElementById('rf-anos').value||1;
+  const val=+document.getElementById('rf-val').value||0;
+  const dias=Math.round(anos*365);
+  const bruto = idx==='CDI' ? cdi*(tx/100) : idx==='PRE' ? tx : ip+tx;
+  const isento=ISENTOS.includes(tipo);
+  const al=isento?0:aliq(dias);
+  const liq=bruto*(1-al);
+  const pctCDI = cdi>0 ? liq/cdi*100 : 0;
+  // Quanto um produto TRIBUTADO precisa render para empatar com este líquido.
+  const eqTrib = liq/(1-aliq(dias));
+
+  // Tesouro de prazo mais próximo, no mesmo indexador.
+  const alvo=new Date(); alvo.setFullYear(alvo.getFullYear()+Math.round(anos));
+  const filtro = idx==='IPCA'?/IPCA/ : idx==='PRE'?/Prefixado/ : /Selic/;
+  let melhor=null,dmin=1e9;
+  (RF.tesouro||[]).filter(t=>filtro.test(t.n)).forEach(t=>{
+    const p=t.v.split('/'); const dt=new Date(+p[2],+p[1]-1,+p[0]);
+    const d=Math.abs(dt-alvo); if(d<dmin){dmin=d;melhor=t}
+  });
+  let cmp='';
+  if(melhor){
+    const bTD = /Selic/.test(melhor.n)?sel+melhor.tx : /IPCA/.test(melhor.n)?ip+melhor.tx : melhor.tx;
+    const lTD = bTD*(1-aliq(dias));
+    const dif = liq-lTD;
+    cmp=`<tr><td>${melhor.n} ${melhor.v}</td><td>${f2(bTD)}%</td><td>${f2(lTD)}%</td></tr>`;
+    cmp=`<div style="margin-top:12px"><div class="mini" style="margin-bottom:5px">Contra o título público de prazo parecido</div>
+      <table><tbody><tr><td>${melhor.n} ${melhor.v}</td><td style="text-align:right">bruto ${f2(bTD)}%</td>
+      <td style="text-align:right"><b>líquido ${f2(lTD)}%</b></td></tr></tbody></table>
+      <div style="margin-top:8px;font-size:13px" class="${dif>=0?'pos':'neg'}">
+      ${dif>=0 ? `Sua oferta paga <b>${f2(dif)} p.p. a mais</b>, líquido. Esse é o prêmio que você recebe por trocar risco soberano por risco de banco.`
+               : `Sua oferta paga <b>${f2(Math.abs(dif))} p.p. a MENOS</b> que o título público — e ainda carrega risco de crédito privado.`}</div></div>`;
+  }
+  const temFGC=['CDB','LCI','LCA'].includes(tipo);
+  const fgc = temFGC
+    ? (val>250000
+        ? `<div class="neg" style="font-size:13px;margin-top:10px">⚠ FGC cobre R$ 250.000 por CPF e conglomerado — <b>R$ ${(val-250000).toLocaleString('pt-BR')}</b> ficariam descobertos neste emissor.</div>`
+        : `<div class="pos" style="font-size:13px;margin-top:10px">Coberto pelo FGC (limite de R$ 250.000 por CPF e conglomerado; teto global de R$ 1 milhão a cada 4 anos).</div>`)
+    : `<div class="neg" style="font-size:13px;margin-top:10px">⚠ ${tipo} <b>não tem FGC</b>. O risco é integralmente do emissor — leia rating e garantias antes de olhar a taxa.</div>`;
+
+  document.getElementById('rf-out').innerHTML=`
+    <table><tbody>
+      <tr><td>Rendimento bruto</td><td style="text-align:right"><b>${f2(bruto)}% a.a.</b></td></tr>
+      <tr><td>Imposto de renda</td><td style="text-align:right">${isento?'<span class="pos">isento</span>':`${(al*100).toFixed(1)}% (${dias} dias)`}</td></tr>
+      <tr><td>Rendimento líquido</td><td style="text-align:right"><b>${f2(liq)}% a.a.</b></td></tr>
+      <tr><td>Equivale a</td><td style="text-align:right">${f1(pctCDI)}% do CDI, já livre de imposto</td></tr>
+      ${isento?`<tr><td>Um CDB precisaria render</td><td style="text-align:right"><b>${f2(eqTrib)}%</b> (${f1(cdi>0?eqTrib/cdi*100:0)}% do CDI) para empatar</td></tr>`:''}
+    </tbody></table>${cmp}${fgc}`;
+}
+
+// ---------- CARTEIRA ----------
+const IDXA={}, IDXF={};
+function idxCarteira(){ ACOES.forEach(r=>IDXA[r.t]=r); FIIS.forEach(r=>IDXF[r.t]=r); }
+
+let POS=[];   // [{tipo:'acao'|'fii'|'outro', id, qtd?, valor?}]
+
+function mudouTipo(){
+  const t=document.getElementById('ci-tipo').value, ext=t==='outro';
+  document.getElementById('w-ativo').style.display=ext?'none':'';
+  document.getElementById('w-nome').style.display =ext?'':'none';
+  document.getElementById('w-qtd').style.display  =ext?'none':'';
+  document.getElementById('w-val').style.display  =ext?'':'none';
+  const sel=document.getElementById('ci-ativo');
+  const fonte = t==='acao' ? ACOES : FIIS;
+  sel.innerHTML=[...fonte].sort((a,b)=>a.t.localeCompare(b.t))
+    .map(r=>`<option value="${r.t}">${r.t} — R$ ${f2(r.p)}</option>`).join('');
+}
+function aviso(msg){
+  document.getElementById('cart-erro').innerHTML = msg
+    ? `<div style="color:var(--warn);font-size:13px">${msg}</div>` : '';
+}
+function addPos(){ guard('adicionar', ()=>{
+  const t=document.getElementById('ci-tipo').value;
+  if(t==='outro'){
+    const n=document.getElementById('ci-nome').value.trim();
+    const v=+document.getElementById('ci-val').value;
+    if(!n)      return aviso('Informe um nome para a posição.');
+    if(!(v>0))  return aviso('Informe um valor maior que zero.');
+    POS.push({tipo:'outro',id:n,valor:v});
+    document.getElementById('ci-nome').value=''; document.getElementById('ci-val').value='';
+  }else{
+    const tk=document.getElementById('ci-ativo').value;
+    const q=+document.getElementById('ci-qtd').value;
+    if(!tk)    return aviso('Escolha um ativo.');
+    if(!(q>0)) return aviso('Informe uma quantidade maior que zero.');
+    const ja=POS.find(p=>p.id===tk);
+    if(ja) ja.qtd+=q; else POS.push({tipo:t,id:tk,qtd:q});
+    document.getElementById('ci-qtd').value='';
+  }
+  aviso(''); salvar(); analisarCarteira();
+}) }
+function removePos(i){ POS.splice(i,1); salvar(); analisarCarteira(); }
+function salvar(){ try{ localStorage.setItem('carteira2',JSON.stringify(POS)) }catch(e){} }
+
+function exemploCarteira(){
+  POS=[{tipo:'acao',id:'PETR4',qtd:200},{tipo:'acao',id:'WEGE3',qtd:150},
+       {tipo:'fii',id:'MXRF11',qtd:2000},{tipo:'fii',id:'HGLG11',qtd:40},
+       {tipo:'outro',id:'Tesouro IPCA+ 2035',valor:25000},
+       {tipo:'outro',id:'CDB 110% do CDI',valor:30000}];
+  salvar(); analisarCarteira();
+}
+function limparCarteira(){
+  POS=[]; salvar(); aviso('');
+  document.getElementById('cart-lista').innerHTML='';
+  document.getElementById('cart-res').innerHTML='';
+}
+// Converte POS (o que o usuário informou) em itens com valor e indicadores.
+function materializa(){
+  return POS.map(p=>{
+    if(p.tipo==='outro') return {nome:p.id,valor:p.valor,classe:'Renda fixa / outros',fonte:'valor'};
+    const d = p.tipo==='acao' ? IDXA[p.id] : IDXF[p.id];
+    if(!d) return {nome:p.id,valor:0,classe:'—',fonte:'erro'};
+    return {nome:p.id,ticker:p.id,qtd:p.qtd,preco:d.p,valor:p.qtd*d.p,
+            classe:p.tipo==='acao'?'Ação':'FII',dados:d,
+            tipoFii:p.tipo==='fii'?d.tp:null,setor:p.tipo==='acao'?d.s:null,fonte:'base'};
+  });
+}
+function renderLista(itens,tot){
+  document.getElementById('cart-lista').innerHTML = !itens.length
+    ? '<div class="cs">Nenhuma posição ainda. Adicione acima ou carregue o exemplo.</div>'
+    : `<table><thead><tr><th>Ativo</th><th>Quantidade</th><th>Valor</th><th>%</th><th></th></tr></thead><tbody>`+
+      itens.map((x,i)=>`<tr><td class="tk">${x.nome} <span class="pill">${x.classe}</span></td>
+        <td>${x.qtd?x.qtd.toLocaleString('pt-BR'):'—'}</td>
+        <td>R$ ${x.valor.toLocaleString('pt-BR',{maximumFractionDigits:0})}</td>
+        <td>${f1(x.valor/tot*100)}%</td>
+        <td><button onclick="removePos(${i})" title="Remover" style="background:none;border:0;color:var(--neg);cursor:pointer;font-size:16px;padding:0 4px">×</button></td>
+      </tr>`).join('')+`</tbody></table>`;
+}
+
+function analisarCarteira(){ guard('carteira', ()=>{
+  const itens=materializa().filter(x=>x.valor>0);
+  const tot=itens.reduce((s,x)=>s+x.valor,0);
+  renderLista(itens,tot||1);
+  if(!itens.length){ document.getElementById('cart-res').innerHTML=''; return }
+
+  itens.forEach(x=>x.pct=x.valor/tot*100);
+  itens.sort((a,b)=>b.valor-a.valor);
+
+  const porClasse=agrupa(itens,x=>x.classe);
+  const maior=itens[0];
+  const hhi=itens.reduce((s,x)=>s+Math.pow(x.pct/100,2),0);
+  const efetivos=1/hhi;   // nº de posições "equivalentes" se fossem iguais
+
+  // --- observações estruturais: fatos sobre a carteira, não conselhos --------
+  const obs=[];
+  if(maior.pct>=30) obs.push({n:'alta',t:`<b>${maior.nome}</b> concentra <b>${f1(maior.pct)}%</b> do total. Um evento específico desse ativo move a carteira inteira.`});
+  if(efetivos<3.5) obs.push({n:'alta',t:`Diversificação efetiva de <b>${f1(efetivos)} posições</b>: mesmo com ${itens.length} linhas, o peso se comporta como se fossem poucas.`});
+
+  const acoes=itens.filter(x=>x.classe==='Ação');
+  const setores=agrupa(acoes,x=>x.setor||'—');
+  const setTop=setores[0];
+  if(setTop && acoes.length>1 && setTop.v/tot*100>=25)
+    obs.push({n:'media',t:`<b>${f1(setTop.v/tot*100)}%</b> do total em um só setor (<b>${setTop.k}</b>). Ações do mesmo setor tendem a cair juntas — são menos diversificação do que parecem.`});
+
+  const fiis=itens.filter(x=>x.classe==='FII');
+  const tipos=agrupa(fiis,x=>x.tipoFii||'—');
+  if(fiis.length>1 && tipos.length===1)
+    obs.push({n:'media',t:`Todos os FIIs são do tipo <b>${tipos[0].k}</b>. ${tipos[0].k==='papel'?'Fundos de papel respondem quase todos ao mesmo fator: a curva de juros.':'Fundos de tijolo compartilham o ciclo imobiliário e a vacância do setor.'}`});
+
+  const vacAlta=fiis.filter(x=>x.dados && x.dados.vac!=null && x.dados.vac>15);
+  vacAlta.forEach(x=>obs.push({n:'media',t:`<b>${x.nome}</b> tem vacância de <b>${f1(x.dados.vac)}%</b> (Informe Trimestral CVM). Vacância alta pressiona a distribuição.`}));
+
+  const divAlta=acoes.filter(x=>x.dados && x.dados.de>3);
+  divAlta.forEach(x=>obs.push({n:'media',t:`<b>${x.nome}</b> tem dívida líquida de <b>${f2(x.dados.de)}×</b> o EBITDA — acima do corte de 3× usado na aba de Ações.`}));
+
+  const poAlto=acoes.filter(x=>x.dados && x.dados.po>100);
+  poAlto.forEach(x=>obs.push({n:'media',t:`<b>${x.nome}</b> distribuiu <b>${x.dados.po}%</b> do lucro. Acima de 100% significa pagar além do que ganhou no exercício.`}));
+
+  const rendaFixa=itens.filter(x=>['Tesouro','Renda fixa bancária','Crédito privado'].includes(x.classe));
+  const pctRF=rendaFixa.reduce((s,x)=>s+x.pct,0);
+  const pctRV=100-pctRF;
+  if(pctRF===0 && itens.length>2) obs.push({n:'info',t:`Nenhuma posição em renda fixa identificada. Toda a carteira oscila com o mercado.`});
+  if(pctRF>0) obs.push({n:'info',t:`Divisão: <b>${f1(pctRV)}%</b> em renda variável, <b>${f1(pctRF)}%</b> em renda fixa. Não existe proporção "certa" — ela depende do seu prazo e do quanto de oscilação você suporta sem vender no pior momento.`});
+
+  const semDado=itens.filter(x=>x.fonte==='valor');
+  if(semDado.length) obs.push({n:'info',t:`${semDado.length} posição(ões) entraram como valor informado — não tenho indicador nem risco desses ativos.`});
+
+  // Mostra no máximo 5, priorizando o que é mais estrutural. Uma lista longa de
+  // observações dilui as duas ou três que realmente importam.
+  const ordem={alta:0,media:1,info:2};
+  obs.sort((a,b)=>ordem[a.n]-ordem[b.n]);
+  const obsTop=obs.slice(0,5), obsResto=obs.length-obsTop.length;
+
+  // --- render ---------------------------------------------------------------
+  const cor={alta:'var(--neg)',media:'var(--warn)',info:'var(--dim)'};
+  const rot={alta:'CONCENTRAÇÃO',media:'ATENÇÃO',info:'CONTEXTO'};
+  document.getElementById('cart-res').innerHTML=`
+  <div class="kpis">
+    <div class="card kpi"><div class="l">Patrimônio</div><div class="v">R$ ${(tot/1000).toFixed(1)}k</div><div class="n">${itens.length} posições</div></div>
+    <div class="card kpi"><div class="l">Maior posição</div><div class="v ${maior.pct>=30?'neg':''}">${f1(maior.pct)}%</div><div class="n">${maior.nome}</div></div>
+    <div class="card kpi"><div class="l"><abbr title="Quantas posições de peso igual se comportariam como esta carteira. Dez ativos em que um vale metade funcionam como três — revela concentração escondida atrás de uma lista comprida.">Diversificação efetiva</abbr></div><div class="v ${efetivos<3.5?'neg':''}">${f1(efetivos)}</div><div class="n">de ${itens.length} posições</div></div>
+    <div class="card kpi"><div class="l">Renda variável</div><div class="v">${f1(pctRV)}%</div><div class="n">${f1(pctRF)}% em renda fixa</div></div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="ct">O que chama atenção na estrutura</div>
+    <div class="cs">Descrição, não instrução. Nenhum item aqui diz para comprar ou vender.</div>
+    ${obsTop.length?obsTop.map(o=>`<div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)">
+      <div style="font-size:10px;font-weight:800;color:${cor[o.n]};min-width:96px;letter-spacing:.4px;padding-top:2px">${rot[o.n]}</div>
+      <div style="font-size:13.5px;line-height:1.55">${o.t}</div></div>`).join('')
+      :'<div class="cs">Nada estruturalmente marcante nos critérios avaliados.</div>'}
+    ${obsResto>0?`<div class="cs" style="margin-top:11px">Mais ${obsResto} observação(ões) de menor peso não listadas.</div>`:''}
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="ct">Peso de cada posição</div>
+      <div class="cs">Vermelho passa de 30% do patrimônio.</div>
+      ${barras(itens.map(x=>({t:x.nome,v:x.pct})),30)}
+    </div>
+    <div class="card">
+      <div class="ct">Como cada posição se comporta</div>
+      <div class="cs">Os mesmos indicadores das outras abas, só para o que você tem.</div>
+      <table><tbody>${itens.map(x=>{
+        let ind='<span style="color:var(--dim)">sem indicador na base</span>';
+        if(x.classe==='Ação'&&x.dados) ind=`L/P ${f1(x.dados.ey)}% · ROE ${f1(x.dados.roe)}% · dív ${f2(x.dados.de)}×`;
+        if(x.classe==='FII'&&x.dados) ind=`P/VP ${x.dados.pvp.toFixed(2)} · DY ${f1(x.dados.dy)}%`+(x.dados.vac!=null?` · vac ${f1(x.dados.vac)}%`:'');
+        return `<tr><td class="tk">${x.nome}</td>
+          <td style="text-align:right;font-size:12px;color:var(--dim)">${ind}</td></tr>`}).join('')}
+      </tbody></table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ct">Perguntas que os números não respondem</div>
+    <div class="cs" style="margin-bottom:0">
+      Para que é esse dinheiro e em quanto tempo você vai precisar dele? Se a carteira caísse 30% em dois meses, você aguentaria sem vender? Existe reserva de emergência <b>fora</b> daqui? Você entende o que cada posição faz para ganhar dinheiro?<br><br>
+      Essas quatro respostas mudam mais a decisão do que qualquer indicador desta página — e nenhuma delas está nos dados. Se elas ficarem difíceis, é sinal de conversa com um profissional registrado na CVM, não de mais planilha.
+    </div>
+  </div>`;
+}) }
+
+function agrupa(arr,key){
+  const m={}; arr.forEach(x=>{ const k=key(x); m[k]=(m[k]||0)+x.valor });
+  return Object.entries(m).map(([k,v])=>({k,v})).sort((a,b)=>b.v-a.v);
+}
+function barras(rows,limite){
+  if(!rows.length) return '<div class="cs">sem dados</div>';
+  const mx=Math.max(...rows.map(r=>r.v))||1;
+  return `<div style="display:flex;flex-direction:column;gap:7px">`+rows.map(r=>{
+    const w=r.v/mx*100, c=r.v>=limite?'var(--neg)':'var(--accent)';
+    return `<div style="display:grid;grid-template-columns:118px 1fr 54px;gap:9px;align-items:center;font-size:12.5px">
+      <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.t}</div>
+      <div style="background:var(--line);border-radius:4px;height:15px;overflow:hidden">
+        <div style="width:${w}%;height:100%;background:${c};border-radius:4px"></div></div>
+      <div style="text-align:right;font-variant-numeric:tabular-nums">${f1(r.v)}%</div></div>`}).join('')+`</div>`;
+}
+
+// Qualquer erro não capturado também vai para a caixa vermelha.
+window.addEventListener('error', ev => erro('script', ev.error || ev.message));
+
+(function init(){
+  guard('carga', ()=>{
+    if(!Array.isArray(ACOES)) throw new Error('ACOES não é lista — dados não foram injetados');
+    if(!Array.isArray(FIIS))  throw new Error('FIIS não é lista — dados não foram injetados');
+    const sel=document.getElementById('sec');
+    [...new Set(ACOES.map(r=>r.s))].filter(Boolean).sort().forEach(s=>{
+      const o=document.createElement('option');o.value=s;o.textContent=s;sel.appendChild(o)});
+  });
+  guard('ações', render);
+  // FIIs fica para a abertura da aba (setTab). Renderizar as duas no load fazia
+  // um erro em FII derrubar também a tabela de ações.
+})();
+</script>

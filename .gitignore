@@ -1,0 +1,32 @@
+# ---------------------------------------------------------------------------
+# Dados baixados das fontes públicas: ~2 GB e totalmente reproduzíveis.
+# Rode ferramentas/atualizar.ps1 para recriar tudo do zero.
+# ---------------------------------------------------------------------------
+dados/
+
+# A watchlist dos EUA é escolha pessoal — mantenha local.
+# Para versionar a sua, remova esta linha.
+dados/watchlist_eua.txt
+
+# ---------------------------------------------------------------------------
+# Segredos. Os tokens vivem em variável de ambiente (BRAPI_TOKEN,
+# ALPHAVANTAGE_TOKEN) e nunca em arquivo — estas linhas são rede de segurança.
+# ---------------------------------------------------------------------------
+*.env
+.env*
+*token*.txt
+*secret*
+*.key
+.mcp.json
+
+# ---------------------------------------------------------------------------
+# Sessões e configuração local do Claude Code
+# ---------------------------------------------------------------------------
+.claude/settings.local.json
+
+# Sistema
+Thumbs.db
+desktop.ini
+.DS_Store
+*.tmp
+~$*
