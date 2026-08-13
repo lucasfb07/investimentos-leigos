@@ -138,7 +138,7 @@ footer{margin-top:26px;font-size:12.5px;color:var(--dim);border-top:1px solid va
     <span class="chip"><b>1.045</b> FIIs</span>
     <span class="chip"><b>437</b> empresas</span>
     <span class="chip"><b>16</b> títulos do Tesouro</span>
-    <span class="chip">atualizado <b>12/08/2026 23:09</b></span>
+    <span class="chip">atualizado <b>12/08/2026 23:51</b></span>
   </div>
 </div></div>
 
@@ -632,8 +632,8 @@ function top5U(d){
 
 function renderD(){
   const cl=document.getElementById('d-cl').value;
-  const mr=+document.getElementById('d-ret').value, mv=+document.getElementById('d-vol').value;
-  const mp=+document.getElementById('d-pl').value;
+  const mr=campoNum('d-ret',-Infinity), mv=campoNum('d-vol',Infinity);
+  const mp=campoNum('d-pl',0);
   const d=(FUNDOS||[]).filter(x=>x.c===cl && x.r>=mr && (x.v==null||x.v<=mv) && x.pl>=mp);
   const nd='<span style="color:var(--dim)">—</span>';
 
@@ -732,11 +732,23 @@ function renderU(){
      <td class="${r.be!=null&&r.be>1.5?'neg':''}">${c(r.be,2)}</td><td>${c(r.ee,1)}</td></tr>`).join('');
 }
 
+// Campo vazio em <input type=number> devolve "", e +"" é 0 — não NaN.
+// Sem esta guarda, limpar o campo de dívida vira "dívida ≤ 0" e o de
+// crescimento vira "≥ 0%", descartando empresas em silêncio. Vazio tem que
+// significar filtro DESLIGADO, não filtro em zero.
+function campoNum(id, sePadrao){
+  const el=document.getElementById(id);
+  if(!el) return sePadrao;
+  const t=String(el.value).trim();
+  if(t==='') return sePadrao;
+  const n=Number(t);
+  return isFinite(n) ? n : sePadrao;
+}
 function filtA(){
-  const req=+document.getElementById('req').value||12;
-  const md=+document.getElementById('mdiv').value, mp=+document.getElementById('mpo').value;
-  const ma=+document.getElementById('mal').value, sc=document.getElementById('sec').value;
-  const mcl=+document.getElementById('mcl').value;
+  const req=campoNum('req',12) || 12;
+  const md=campoNum('mdiv',Infinity), mp=campoNum('mpo',Infinity);
+  const ma=campoNum('mal',0), sc=document.getElementById('sec').value;
+  const mcl=campoNum('mcl',-999);
   return ACOES.filter(r=>r.de<=md && r.po<=mp && r.po>=0 && r.al>=ma && (!sc||r.s===sc)
       // -999 desliga o filtro. Empresa sem crescimento calculável (base negativa)
       // sai da lista quando o filtro está ativo, em vez de passar por omissão.
@@ -941,8 +953,8 @@ function bars(d){
 }
 
 function filtF(){
-  const tp=document.getElementById('ftp').value, pv=+document.getElementById('fpvp').value;
-  const dy=+document.getElementById('fdy').value, tx=+document.getElementById('ftx').value;
+  const tp=document.getElementById('ftp').value, pv=campoNum('fpvp',Infinity);
+  const dy=campoNum('fdy',-Infinity), tx=campoNum('ftx',Infinity);
   return FIIS.filter(r=>(!tp||r.tp===tp)&&r.pvp<=pv&&r.dy>=dy&&r.tx<=tx);
 }
 function renderF(){
