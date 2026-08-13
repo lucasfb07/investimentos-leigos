@@ -222,6 +222,7 @@ footer{margin-top:26px;font-size:12.5px;color:var(--dim);border-top:1px solid va
       <div class="f"><label>Dívida líq/EBITDA máx</label><input type="number" id="mdiv" value="3" step="0.5" oninput="render()"></div>
       <div class="f"><label>Payout máx %</label><input type="number" id="mpo" value="100" step="10" oninput="render()"></div>
       <div class="f"><label>Anos com lucro mín</label><select id="mal" onchange="render()"><option value="0">0</option><option value="2">2</option><option value="3" selected>3</option></select></div>
+      <div class="f"><label><abbr title="Crescimento anual composto do lucro entre 2023 e 2025. Compare sempre com o crescimento da receita: lucro subindo muito mais que receita costuma ser ganho não recorrente, não operação melhor.">Cresc. lucro mín %</abbr></label><input type="number" id="mcl" value="-999" step="5" oninput="render()"></div>
       <div class="f"><label>Setor</label><select id="sec" onchange="render()"><option value="">Todos</option></select></div>
     </div>
   </div>
@@ -235,6 +236,7 @@ footer{margin-top:26px;font-size:12.5px;color:var(--dim);border-top:1px solid va
       <div class="f"><label>Previsibilidade</label><input type="number" id="w3" value="20" step="5" oninput="render()"></div>
       <div class="f"><label>Baixa dívida</label><input type="number" id="w4" value="20" step="5" oninput="render()"></div>
       <div class="f"><label>Margem líquida</label><input type="number" id="w5" value="10" step="5" oninput="render()"></div>
+      <div class="f"><label>Crescimento</label><input type="number" id="w6" value="20" step="5" oninput="render()"></div>
     </div>
     <div class="top5" id="t5a"></div>
     <details><summary>Por que este Top 5 não é uma lista de compra</summary>
@@ -271,6 +273,8 @@ footer{margin-top:26px;font-size:12.5px;color:var(--dim);border-top:1px solid va
       <th onclick="srt('a','tt')"><abbr title="Preço em que o L/P igualaria o retorno que você exigiu no filtro. Aritmética sobre o lucro de um ano passado — se o lucro cair, o teto cai junto.">Teto R$</abbr></th>
       <th onclick="srt('a','dsc')"><abbr title="Distância entre o preço atual e o preço-teto. Positivo = negociando abaixo do teto pelos seus critérios.">Dist %</abbr></th>
       <th onclick="srt('a','roe')"><abbr title="Return on Equity: lucro dividido pelo patrimônio dos sócios. Mede quanto a empresa gera de retorno com o capital que tem. ROE alto e sustentado costuma indicar bom negócio.">ROE %</abbr></th>
+      <th onclick="srt('a','cl')"><abbr title="Crescimento anual composto do LUCRO entre 2023 e 2025. 'virada' = saiu de prejuízo para lucro, o que não cabe em percentual.">Cresc lucro</abbr></th>
+      <th onclick="srt('a','cr')"><abbr title="Crescimento anual composto da RECEITA. É a coluna de controle: lucro crescendo muito mais que receita sugere ganho não recorrente ou corte de custo, não expansão do negócio.">Cresc receita</abbr></th>
       <th onclick="srt('a','ml')"><abbr title="Quanto sobra de lucro para cada R$ 100 de receita. Varia muito por setor: supermercado opera com margem baixa por natureza, software com margem alta.">Marg líq %</abbr></th>
       <th onclick="srt('a','po')"><abbr title="Fatia do lucro distribuída aos sócios em dividendos e JCP. Acima de 100% significa pagar mais do que ganhou no ano, tirando de reservas.">Payout %</abbr></th>
       <th onclick="srt('a','de')"><abbr title="Quantos anos de geração de caixa seriam necessários para quitar a dívida líquida. Negativo significa caixa maior que a dívida. Acima de 3 costuma exigir atenção — mas o normal varia por setor.">Dív/EBITDA</abbr></th>
@@ -508,9 +512,16 @@ footer{margin-top:26px;font-size:12.5px;color:var(--dim);border-top:1px solid va
 
     <div id="cart-lista" style="margin-top:14px"></div>
 
-    <div style="display:flex;gap:9px;margin-top:12px;flex-wrap:wrap">
+    <div style="display:flex;gap:9px;margin-top:12px;flex-wrap:wrap;align-items:center">
+      <button class="tab" onclick="document.getElementById('cart-arq').click()">📥 Importar da B3</button>
+      <input type="file" id="cart-arq" accept=".json,.csv" style="display:none" onchange="importarArquivo(this)">
       <button class="tab" onclick="exemploCarteira()">Carregar exemplo</button>
       <button class="tab" onclick="limparCarteira()">Limpar tudo</button>
+    </div>
+    <div class="cs" style="margin-top:9px">
+      Baixe o relatório de posição em <b>investidor.b3.com.br</b> → Extratos e relatórios → Posição, converta com
+      <code>ferramentas\importar-b3.ps1 -Arquivo caminho\relatorio.xlsx</code> e selecione o
+      <code>dados\carteira_b3.json</code> gerado. O arquivo é lido <b>no seu navegador</b> — nada é enviado a lugar nenhum.
     </div>
   </div>
 
@@ -725,7 +736,11 @@ function filtA(){
   const req=+document.getElementById('req').value||12;
   const md=+document.getElementById('mdiv').value, mp=+document.getElementById('mpo').value;
   const ma=+document.getElementById('mal').value, sc=document.getElementById('sec').value;
-  return ACOES.filter(r=>r.de<=md && r.po<=mp && r.po>=0 && r.al>=ma && (!sc||r.s===sc))
+  const mcl=+document.getElementById('mcl').value;
+  return ACOES.filter(r=>r.de<=md && r.po<=mp && r.po>=0 && r.al>=ma && (!sc||r.s===sc)
+      // -999 desliga o filtro. Empresa sem crescimento calculável (base negativa)
+      // sai da lista quando o filtro está ativo, em vez de passar por omissão.
+      && (mcl<=-999 || (r.cl!=null && r.cl>=mcl)))
     .map(r=>({...r, tt2:+(r.lu*1e9/(r.lu*1e9/r.p*(r.ey/100))/(req/100)).toFixed(2),
                     dsc:+(((r.ey/req)-1)*100).toFixed(0)}));
 }
@@ -738,17 +753,22 @@ function nrm(arr,get,inv){
 }
 function top5A(d){
   if(d.length<2) return d.map(r=>({...r,sc:0}));
-  const w=['w1','w2','w3','w4','w5'].map(i=>+document.getElementById(i).value||0);
+  const w=['w1','w2','w3','w4','w5','w6'].map(i=>+document.getElementById(i).value||0);
   const tw=w.reduce((a,b)=>a+b,0)||1;
+  // Crescimento entra com teto de 50% ao ano: acima disso quase sempre é base
+  // deprimida ou evento único, e sem o teto isso domina o score sozinho.
+  // Sem dado de crescimento vale 0, não a média — não premia a ausência.
+  const cres=r=> r.cl==null ? 0 : Math.min(Math.max(r.cl,-50),50);
   const nEy=nrm(d,r=>r.ey), nRoe=nrm(d,r=>Math.min(r.roe,60)), nAl=nrm(d,r=>r.al),
-        nDe=nrm(d,r=>Math.max(r.de,-1),true), nMl=nrm(d,r=>r.ml);
-  return d.map(r=>({...r, sc:100*(w[0]*nEy(r)+w[1]*nRoe(r)+w[2]*nAl(r)+w[3]*nDe(r)+w[4]*nMl(r))/tw,
+        nDe=nrm(d,r=>Math.max(r.de,-1),true), nMl=nrm(d,r=>r.ml), nCr=nrm(d,cres);
+  return d.map(r=>({...r, sc:100*(w[0]*nEy(r)+w[1]*nRoe(r)+w[2]*nAl(r)+w[3]*nDe(r)+w[4]*nMl(r)+w[5]*nCr(r))/tw,
     det:detalhe([
       {rot:'Lucro/preço',   n:nEy(r),  peso:w[0], val:f1(r.ey)+'%'},
       {rot:'ROE',           n:nRoe(r), peso:w[1], val:f1(r.roe)+'%'},
       {rot:'Previsibilidade',n:nAl(r), peso:w[2], val:r.al+'/3 anos'},
       {rot:'Baixa dívida',  n:nDe(r),  peso:w[3], val:f2(r.de)+'×'},
-      {rot:'Margem líquida',n:nMl(r),  peso:w[4], val:f1(r.ml)+'%'}])}))
+      {rot:'Margem líquida',n:nMl(r),  peso:w[4], val:f1(r.ml)+'%'},
+      {rot:'Crescimento',   n:nCr(r),  peso:w[5], val:r.vir?'virada':(r.cl==null?'sem dado':f1(r.cl)+'%/ano')}])}))
           .sort((a,b)=>b.sc-a.sc);
 }
 function top5F(d){
@@ -856,8 +876,9 @@ function cards(el,rows,linhas){
 function render(){
   const d=filtA(), req=+document.getElementById('req').value||12;
   cards('t5a', top5A(d), r=>`<dt>L/P</dt><dd>${f1(r.ey)}%</dd><dt>ROE</dt><dd>${f1(r.roe)}%</dd>
-    <dt>Payout</dt><dd>${r.po}%</dd><dt>Dív/EBITDA</dt><dd>${f2(r.de)}</dd>
-    <dt>Anos c/ lucro</dt><dd>${r.al}/3</dd>`);
+    <dt>Cresc. lucro</dt><dd>${r.vir?'virada':(r.cl==null?'—':f1(r.cl)+'%')}</dd>
+    <dt>Cresc. receita</dt><dd>${r.cr==null?'—':f1(r.cr)+'%'}</dd>
+    <dt>Dív/EBITDA</dt><dd>${f2(r.de)}</dd>`);
   document.getElementById('k1').textContent=d.length;
   document.getElementById('k1n').textContent=`de ${ACOES.length} com dado`;
   document.getElementById('k2').textContent=f1(med(d.map(r=>r.ey)))+'%';
@@ -871,9 +892,17 @@ function render(){
   document.querySelector('#ta tbody').innerHTML=s.map(r=>{
     const teto=r.p*(r.ey/req);
     const dist=((teto/r.p)-1)*100;
+    const nd='<span style="color:var(--dim)">—</span>';
+    // Lucro crescendo muito acima da receita costuma ser ganho não recorrente:
+    // marca em vermelho para o leitor não confundir com expansão do negócio.
+    const suspeito = r.cl!=null && r.cr!=null && r.cl>30 && r.cl > r.cr*3;
+    const cl = r.vir ? '<span class="pos">virada</span>'
+             : r.cl==null ? nd
+             : `<span class="${suspeito?'neg':r.cl>0?'pos':''}"${suspeito?' title="Lucro cresce muito acima da receita — típico de ganho não recorrente"':''}>${f1(r.cl)}</span>`;
+    const cr = r.cr==null ? nd : f1(r.cr);
     return `<tr><td class="tk">${r.t}</td><td>${f2(r.p)}</td><td>${f1(r.ey)}</td>
     <td>${f2(teto)}</td><td class="${dist>=0?'pos':'neg'}">${dist>=0?'+':''}${dist.toFixed(0)}</td>
-    <td>${f1(r.roe)}</td><td>${f1(r.ml)}</td><td>${r.po}</td>
+    <td>${f1(r.roe)}</td><td>${cl}</td><td>${cr}</td><td>${f1(r.ml)}</td><td>${r.po}</td>
     <td class="${r.de<=0?'pos':''}">${f2(r.de)}</td><td>${f2(r.lu)}</td><td>${r.al}</td></tr>`}).join('');
 }
 function scatter(d){
@@ -1122,6 +1151,85 @@ function addPos(){ guard('adicionar', ()=>{
 }) }
 function removePos(i){ POS.splice(i,1); salvar(); analisarCarteira(); }
 function salvar(){ try{ localStorage.setItem('carteira2',JSON.stringify(POS)) }catch(e){} }
+
+// Lê o arquivo LOCALMENTE via FileReader. Nada trafega: não há fetch nem envio.
+function importarArquivo(input){ guard('importar', ()=>{
+  const f=input.files && input.files[0];
+  if(!f) return;
+  const fr=new FileReader();
+  fr.onload=()=>{ guard('importar', ()=>{
+    let novos=[];
+    const txt=String(fr.result||'').trim();
+    if(f.name.toLowerCase().endsWith('.csv')){
+      novos=lerCsvB3(txt);
+    }else{
+      const j=JSON.parse(txt);
+      const arr=Array.isArray(j)?j:[j];
+      novos=arr.filter(x=>x && x.id).map(x=>({
+        tipo:(x.tipo==='acao'||x.tipo==='fii')?x.tipo:'outro',
+        id:String(x.id),
+        qtd:x.qtd!=null?+x.qtd:undefined,
+        valor:x.valor!=null?+x.valor:undefined }));
+    }
+    if(!novos.length){ aviso('Nenhuma posição reconhecida no arquivo.'); return }
+    // Ticker que não está na base viraria valor zero e sumiria do diagnóstico:
+    // converte para "outro" com o valor do extrato, avisando.
+    const semBase=[];
+    novos.forEach(p=>{
+      if(p.tipo==='outro') return;
+      const d = p.tipo==='acao' ? IDXA[p.id] : IDXF[p.id];
+      if(!d){ semBase.push(p.id);
+        if(p.valor==null){ p.valor=0 }
+        p.tipo='outro'; p.qtd=undefined; }
+    });
+    POS=novos.filter(p=>p.tipo!=='outro' || (p.valor!=null && p.valor>0));
+    salvar(); analisarCarteira();
+    const perdidas=novos.length-POS.length;
+    aviso(`${POS.length} posição(ões) importada(s).`
+      + (semBase.length?` Sem indicador na base: ${semBase.join(', ')} — entraram como valor fixo.`:'')
+      + (perdidas>0?` ${perdidas} ignorada(s) por não ter quantidade nem valor.`:''));
+  }) };
+  fr.onerror=()=>aviso('Não consegui ler o arquivo.');
+  fr.readAsText(f,'utf-8');
+  input.value='';
+}) }
+// Aceita também o CSV cru da B3, para quem exportar nesse formato.
+function lerCsvB3(txt){
+  const sep = (txt.split('\n')[0].match(/;/g)||[]).length >= (txt.split('\n')[0].match(/,/g)||[]).length ? ';' : ',';
+  const linhas=txt.split(/\r?\n/).filter(l=>l.trim());
+  const norm=s=>(s||'').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+  let hi=-1,map={};
+  for(let i=0;i<Math.min(15,linhas.length);i++){
+    const cs=linhas[i].split(sep).map(norm); const m={};
+    cs.forEach((h,j)=>{
+      if(/CODIGO DE NEGOCIACAO|CODIGO NEGOCIACAO|TICKER/.test(h)&&m.tk==null) m.tk=j;
+      else if(/PRODUTO|ATIVO|ESPECIFICACAO/.test(h)&&m.pr==null) m.pr=j;
+      if(/QUANTIDADE/.test(h)&&m.q==null) m.q=j;
+      if(/VALOR/.test(h)&&m.v==null) m.v=j;
+    });
+    if((m.tk!=null||m.pr!=null)&&(m.q!=null||m.v!=null)){ hi=i; map=m; break }
+  }
+  if(hi<0) return [];
+  const num=s=>{ if(!s) return null; let x=String(s).replace(/[R$\s]/g,'');
+    x = /,\d{1,2}$/.test(x) ? x.replace(/\./g,'').replace(',','.') : x.replace(/,/g,'');
+    const n=parseFloat(x); return isNaN(n)?null:n; };
+  const out=[];
+  for(let i=hi+1;i<linhas.length;i++){
+    const c=linhas[i].split(sep);
+    const bruto=(map.tk!=null?c[map.tk]:'')||'';
+    const prod=(map.pr!=null?c[map.pr]:'')||'';
+    if(/^\s*(total|subtotal)/i.test(bruto+prod)) continue;
+    let tk=null; const t=bruto.trim().toUpperCase().replace(/F$/,'');
+    if(/^[A-Z]{4}\d{1,2}$/.test(t)) tk=t;
+    else { const m2=prod.toUpperCase().match(/^([A-Z]{4}\d{1,2})\b/); if(m2) tk=m2[1] }
+    const q=map.q!=null?num(c[map.q]):null, v=map.v!=null?num(c[map.v]):null;
+    if(!tk && !prod.trim()) continue;
+    if(q==null && v==null) continue;
+    if(tk) out.push({tipo:/11$/.test(tk)?'fii':'acao', id:tk, qtd:q||undefined, valor:v||undefined});
+    else out.push({tipo:'outro', id:prod.trim(), valor:v||undefined});
+  }
+  return out;
+}
 
 function exemploCarteira(){
   POS=[{tipo:'acao',id:'PETR4',qtd:200},{tipo:'acao',id:'WEGE3',qtd:150},

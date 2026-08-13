@@ -12,6 +12,7 @@ param(
   [double]$RetornoExigido = 12,   # lucro/preço alvo, em % — define o preço-teto
   [double]$MaxDivida = 3,         # dívida líquida / EBITDA
   [double]$MaxPayout = 100,       # dividendos / lucro, em %
+  [double]$MinCrescLucro = -999,  # CAGR do lucro, em % ao ano
   [double]$MinLucro = 0,          # lucro líquido mínimo, R$
   [int]$MinAnosLucro = 0,         # exercícios com lucro positivo (máx 3)
   [string]$Ticker,
@@ -134,6 +135,23 @@ foreach ($e in $alvos) {
   $anosLucro = 0; $lucros = @()
   foreach ($a in $anos) { $l = V $DRE $a $cnpj '3.11'; if ($null -ne $l) { $lucros += $l; if ($l -gt 0) { $anosLucro++ } } }
 
+  # Crescimento do lucro e da receita entre o exercício mais antigo carregado e
+  # o mais recente, anualizado (CAGR). Mede a empresa ficando maior — que é o
+  # que sustenta valorização no longo prazo, diferente da alta do preço.
+  # Base negativa ou zero invalida o cálculo: sair de prejuízo para lucro não é
+  # "crescimento de X%", é mudança de sinal, e tratar como percentual engana.
+  function Cagr($ini, $fim, $per) {
+    if ($null -eq $ini -or $null -eq $fim) { return $null }
+    if ($ini -le 0 -or $fim -le 0 -or $per -lt 1) { return $null }
+    ([Math]::Pow($fim/$ini, 1/$per) - 1) * 100
+  }
+  $anoIni = $anos[-1]; $anoFim = $anos[0]; $per = $anos.Count - 1
+  $lucroIni = V $DRE $anoIni $cnpj '3.11'; $recIni = V $DRE $anoIni $cnpj '3.01'
+  $cresLucro  = Cagr $lucroIni $lucro   $per
+  $cresReceita= Cagr $recIni   $receita $per
+  # Sinaliza virada de prejuízo para lucro, que o CAGR não consegue expressar.
+  $viradaLucro = ($null -ne $lucroIni -and $lucroIni -le 0 -and $lucro -gt 0)
+
   $rem = 0
   if ($REM2025.ContainsKey($cnpj)) { $rem = $REM2025[$cnpj] }
 
@@ -160,6 +178,8 @@ foreach ($e in $alvos) {
     Payout=$payout; DY=$(if($preco -gt 0){$div12/$preco*100}else{0}); EarningsYield=$ey
     PrecoTeto=$teto; Desconto=$(if($teto){($teto/$preco-1)*100}else{$null})
     AnosLucro=$anosLucro; DivLiq=$divLiq; Ebitda=$ebitda
+    CrescLucro=$cresLucro; CrescReceita=$cresReceita; ViradaLucro=$viradaLucro
+    AnosCresc=$per
   }
 }
 
@@ -168,17 +188,20 @@ $ok = $res | Where-Object {
   $_.Lucro -gt $MinLucro -and
   $_.AnosLucro -ge $MinAnosLucro -and
   ($null -eq $_.DivLiqEbitda -or $_.DivLiqEbitda -le $MaxDivida) -and
-  ($null -eq $_.Payout -or ($_.Payout -le $MaxPayout -and $_.Payout -ge 0))
+  ($null -eq $_.Payout -or ($_.Payout -le $MaxPayout -and $_.Payout -ge 0)) -and
+  ($MinCrescLucro -le -999 -or ($null -ne $_.CrescLucro -and $_.CrescLucro -ge $MinCrescLucro))
 }
 
 "`n=== Screener de ações — DFP 2025 ==="
 "Critérios: retorno exigido {0}% · dívida líq/EBITDA ≤ {1} · payout ≤ {2}% · anos com lucro ≥ {3}" -f $RetornoExigido,$MaxDivida,$MaxPayout,$MinAnosLucro
 "Avaliadas {0} · passaram {1}  (bancos fora: plano de contas incompatível)" -f $res.Count, $ok.Count
 
-"`n{0,-8}{1,9}{2,10}{3,9}{4,8}{5,9}{6,9}{7,10}{8,9}" -f "Ticker","Preço","L/P %","Teto R$","Desc %","ROE %","Payout","Dív/EBITDA","Anos+"
+"`n{0,-8}{1,9}{2,9}{3,9}{4,11}{5,11}{6,9}{7,10}{8,7}" -f "Ticker","Preço","L/P %","ROE %","Cresc lucro","Cresc rec.","Payout","Dív/EBITDA","Anos+"
 $ok | Sort-Object EarningsYield -Descending | Select-Object -First $Top | ForEach-Object {
-  "{0,-8}{1,9:N2}{2,10:N1}{3,9:N2}{4,8:N0}{5,9:N1}{6,9:N0}{7,10:N2}{8,9}" -f `
-    $_.Ticker,$_.Preco,$_.EarningsYield,$_.PrecoTeto,$_.Desconto,$_.ROE,$_.Payout,$_.DivLiqEbitda,$_.AnosLucro
+  $cl = if ($_.ViradaLucro) { "virada" } elseif ($null -ne $_.CrescLucro) { "{0:N1}%" -f $_.CrescLucro } else { "—" }
+  $cr = if ($null -ne $_.CrescReceita) { "{0:N1}%" -f $_.CrescReceita } else { "—" }
+  "{0,-8}{1,9:N2}{2,9:N1}{3,9:N1}{4,11}{5,11}{6,9:N0}{7,10:N2}{8,7}" -f `
+    $_.Ticker,$_.Preco,$_.EarningsYield,$_.ROE,$cl,$cr,$_.Payout,$_.DivLiqEbitda,$_.AnosLucro
 }
 
 $out = "$Cache\screener_acoes.csv"

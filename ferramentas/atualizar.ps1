@@ -78,7 +78,10 @@ $ja = $ac | Sort-Object { -(P $_.EarningsYield) } | Select-Object -First 60 | Fo
   [pscustomobject]@{ t=$_.Ticker; s=($_.Setor -replace '[^\x20-\x7E]',''); p=[math]::Round((P $_.Preco),2)
     ey=[math]::Round((P $_.EarningsYield),1); tt=[math]::Round((P $_.PrecoTeto),2)
     roe=[math]::Round((P $_.ROE),1); po=[math]::Round((P $_.Payout),0); de=[math]::Round((P $_.DivLiqEbitda),2)
-    ml=[math]::Round((P $_.MargemLiq),1); al=[int]$_.AnosLucro; lu=[math]::Round((P $_.Lucro)/1e9,2) } }
+    ml=[math]::Round((P $_.MargemLiq),1); al=[int]$_.AnosLucro; lu=[math]::Round((P $_.Lucro)/1e9,2)
+    cl=$(if($_.CrescLucro){[math]::Round((P $_.CrescLucro),1)}else{$null})
+    cr=$(if($_.CrescReceita){[math]::Round((P $_.CrescReceita),1)}else{$null})
+    vir=$(if($_.ViradaLucro -eq 'True'){1}else{0}) } }
 
 $fi = Import-Csv "$Cache\screener_fiis.csv" -Encoding UTF8 | Where-Object {
   $_.Preco -and (P $_.PVP) -ge 0.2 -and (P $_.PVP) -le 3 -and [int]$_.Cotistas -ge 500 }
