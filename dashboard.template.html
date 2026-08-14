@@ -156,6 +156,56 @@ footer{margin-top:26px;font-size:12.5px;color:var(--dim);border-top:1px solid va
   <button class="tab" id="tab-u" onclick="setTab('u')"><span class="ic">🇺🇸</span>EUA</button>
   <button class="tab" id="tab-d" onclick="setTab('d')"><span class="ic">📦</span>Fundos</button>
   <button class="tab" id="tab-c" onclick="setTab('c')"><span class="ic">🧭</span>Minha carteira</button>
+  <button class="tab" id="tab-m" onclick="setTab('m')"><span class="ic">🔔</span>O que mudou</button>
+</div>
+
+<!-- ============ MUDANÇAS ============ -->
+<div id="pane-m" style="display:none">
+  <div class="expl">
+    <h2>🔔 O que mudou desde a última atualização</h2>
+    <p>As outras abas mostram um <span class="k">retrato do agora</span>. Esta mostra o <b>movimento</b> — e é aí que costuma estar a informação que exige atenção, não no número parado.</p>
+    <p>Três tipos de mudança, e eles não têm o mesmo peso. <b>Preço</b> oscila todo dia e quase sempre é ruído. <b>Fundamento</b> só muda quando sai balanço novo — isso altera a tese. <b>Fato relevante</b> é a empresa avisando oficialmente que algo aconteceu, e vem direto da CVM.</p>
+    <p>Comparação feita contra a execução anterior do <code>atualizar.ps1</code>. Na primeira vez não há com o que comparar.</p>
+  </div>
+
+  <div class="kpis">
+    <div class="card kpi"><div class="l">Comparado com</div><div class="v" id="m0" style="font-size:17px">—</div><div class="n">execução anterior</div></div>
+    <div class="card kpi"><div class="l">Preços que mexeram</div><div class="v" id="m1">—</div><div class="n">variação ≥ 1%</div></div>
+    <div class="card kpi"><div class="l">Fundamentos alterados</div><div class="v" id="m2">—</div><div class="n">balanço novo</div></div>
+    <div class="card kpi"><div class="l">Fatos relevantes</div><div class="v" id="m3">—</div><div class="n">últimos 30 dias</div></div>
+  </div>
+
+  <div id="m-vazio" class="card" style="display:none">
+    <div class="ct">Primeira execução</div>
+    <div class="cs" style="margin-bottom:0">Não há snapshot anterior para comparar. Rode <code>atualizar.ps1</code> de novo mais tarde e esta aba passa a mostrar o que se moveu entre as duas execuções.</div>
+  </div>
+
+  <div id="m-conteudo">
+    <div class="card" style="margin-bottom:16px">
+      <div class="ct">📄 Fatos relevantes — o que a empresa comunicou</div>
+      <div class="cs">Direto da CVM, últimos 30 dias, só de empresas que estão no painel. O assunto costuma bastar; o link abre o documento original.</div>
+      <div id="m-fatos"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="ct">📊 Fundamentos que mudaram</div>
+      <div class="cs">Quando esses números mexem, é porque saiu demonstração nova — o que muda a leitura do ativo, diferente de oscilação de preço.</div>
+      <div id="m-fund"></div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <div class="ct">📈 Maiores movimentos de preço</div>
+        <div class="cs">Desde a última execução. Preço mexe todo dia: oscilação isolada raramente significa alguma coisa.</div>
+        <div id="m-precos"></div>
+      </div>
+      <div class="card">
+        <div class="ct">🔄 Entradas e saídas da base</div>
+        <div class="cs">Ativos que apareceram ou sumiram da cobertura entre uma execução e outra.</div>
+        <div id="m-entrasai"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ============ EUA ============ -->
@@ -214,6 +264,7 @@ footer{margin-top:26px;font-size:12.5px;color:var(--dim);border-top:1px solid va
     <h2>📈 O que é uma ação</h2>
     <p>Comprar uma ação é comprar <span class="k">um pedacinho de uma empresa</span>. Você vira sócio: se ela lucra e cresce, sua parte tende a valer mais e você pode receber parte desse lucro em dinheiro — os <abbr title="Parcela do lucro distribuída aos sócios em dinheiro. No Brasil, dividendo é isento de imposto de renda para pessoa física; JCP é tributado em 15% na fonte.">dividendos</abbr>. Se ela vai mal, sua parte vale menos. Não existe prazo nem taxa combinada: o retorno é o que a empresa conseguir entregar.</p>
     <p>Esta aba filtra empresas por critérios que <b>você</b> define — quanto de lucro por real investido, quanta dívida aceita, quanto do lucro é distribuído. O <span class="k">preço-teto</span> responde a uma pergunta só: a que preço este lucro me daria o retorno que exijo? É conta sobre um ano passado, não previsão.</p>
+    <p><b>Sobre o crescimento:</b> as colunas comparam o acumulado do ano com o mesmo período do ano anterior, pelo <span class="k">ITR trimestral</span> — a medida mais recente que existe em dado público. Olhe as duas juntas: lucro subindo muito acima da receita costuma ser ganho não recorrente ou corte de custo, não negócio crescendo.</p>
     <p><b>O risco em uma frase:</b> a empresa pode piorar, o setor pode virar, e o preço pode cair e demorar anos para voltar — ou não voltar. Não há garantia nenhuma.</p>
   </div>
   <div class="card" style="margin-bottom:16px">
@@ -273,8 +324,8 @@ footer{margin-top:26px;font-size:12.5px;color:var(--dim);border-top:1px solid va
       <th onclick="srt('a','tt')"><abbr title="Preço em que o L/P igualaria o retorno que você exigiu no filtro. Aritmética sobre o lucro de um ano passado — se o lucro cair, o teto cai junto.">Teto R$</abbr></th>
       <th onclick="srt('a','dsc')"><abbr title="Distância entre o preço atual e o preço-teto. Positivo = negociando abaixo do teto pelos seus critérios.">Dist %</abbr></th>
       <th onclick="srt('a','roe')"><abbr title="Return on Equity: lucro dividido pelo patrimônio dos sócios. Mede quanto a empresa gera de retorno com o capital que tem. ROE alto e sustentado costuma indicar bom negócio.">ROE %</abbr></th>
-      <th onclick="srt('a','cl')"><abbr title="Crescimento anual composto do LUCRO entre 2023 e 2025. 'virada' = saiu de prejuízo para lucro, o que não cabe em percentual.">Cresc lucro</abbr></th>
-      <th onclick="srt('a','cr')"><abbr title="Crescimento anual composto da RECEITA. É a coluna de controle: lucro crescendo muito mais que receita sugere ganho não recorrente ou corte de custo, não expansão do negócio.">Cresc receita</abbr></th>
+      <th onclick="srt('a','cl')"><abbr title="Crescimento do LUCRO no acumulado do ano contra o mesmo período do ano anterior (ITR). É a medida mais recente disponível. 'virada' = saiu de prejuízo. Marcado com * quando a empresa não entregou ITR e caiu para o CAGR anual.">Cresc lucro</abbr></th>
+      <th onclick="srt('a','cr')"><abbr title="Mesma comparação para a RECEITA. É a coluna de controle: lucro crescendo muito mais que receita sugere ganho não recorrente ou corte de custo, não expansão do negócio.">Cresc receita</abbr></th>
       <th onclick="srt('a','ml')"><abbr title="Quanto sobra de lucro para cada R$ 100 de receita. Varia muito por setor: supermercado opera com margem baixa por natureza, software com margem alta.">Marg líq %</abbr></th>
       <th onclick="srt('a','po')"><abbr title="Fatia do lucro distribuída aos sócios em dividendos e JCP. Acima de 100% significa pagar mais do que ganhou no ano, tirando de reservas.">Payout %</abbr></th>
       <th onclick="srt('a','de')"><abbr title="Quantos anos de geração de caixa seriam necessários para quitar a dívida líquida. Negativo significa caixa maior que a dívida. Acima de 3 costuma exigir atenção — mas o normal varia por setor.">Dív/EBITDA</abbr></th>
@@ -541,6 +592,7 @@ const RF    = __RF__;
 const EUA   = __EUA__;
 const FUNDOS= __FUNDOS__;
 const CDI12 = __CDI12__;
+const MUD   = __MUD__;
 let sortA={k:'ey',d:-1}, sortF={k:'pvp',d:1}, sortU={k:'ey',d:-1}, sortD={k:'r',d:-1}, tab='a';
 
 const med=a=>{if(!a.length)return 0;const s=[...a].sort((x,y)=>x-y);return s[Math.floor(s.length/2)]};
@@ -561,14 +613,15 @@ function erro(onde,e){
 // derrubava o script inteiro e a outra aba parava de responder junto.
 function guard(nome,fn){ try{ fn() }catch(e){ erro(nome,e) } }
 
-const feito={f:false,r:false,c:false,u:false,d:false};
+const feito={f:false,r:false,c:false,u:false,d:false,m:false};
 function setTab(t){
   try{
     tab=t;
-    ['a','f','r','u','d','c'].forEach(k=>{
+    ['a','f','r','u','d','c','m'].forEach(k=>{
       document.getElementById('pane-'+k).style.display = (k===t?'':'none');
       document.getElementById('tab-'+k).classList.toggle('on',k===t);
     });
+    if(t==='m' && !feito.m){ feito.m=true; guard('mudanças',renderM); }
     if(t==='u' && !feito.u){ feito.u=true; guard('EUA',renderU); }
     if(t==='d' && !feito.d){ feito.d=true; guard('Fundos',renderD); }
     // Cada aba renderiza na primeira abertura, isolada: se uma falhar, as
@@ -628,6 +681,53 @@ function top5U(d){
       {rot:'Baixa oscilação',n:nB(r),peso:w[3], val:r.be==null?'n/d':'beta '+f2(r.be)},
       {rot:'Dividendos',    n:nD(r), peso:w[4], val:r.dy==null?'—':f2(r.dy)+'%'}])}))
           .sort((a,b)=>b.sc-a.sc);
+}
+
+function renderM(){
+  const M=MUD||{};
+  const vazio = !M.desde;
+  document.getElementById('m-vazio').style.display = vazio?'':'none';
+  document.getElementById('m-conteudo').style.display = vazio?'none':'';
+  const dt = M.desde ? new Date(M.desde) : null;
+  document.getElementById('m0').textContent = dt
+    ? dt.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
+  document.getElementById('m1').textContent = (M.precos||[]).length;
+  document.getElementById('m2').textContent = (M.fund||[]).length;
+  document.getElementById('m3').textContent = (M.fatos||[]).length;
+  if(vazio) return;
+
+  const nada='<div class="cs">Nada neste período.</div>';
+
+  // Fatos relevantes: o assunto é o conteúdo, o link é o documento original.
+  document.getElementById('m-fatos').innerHTML = (M.fatos||[]).length
+    ? (M.fatos||[]).map(f=>`<div style="display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)">
+        <div style="min-width:78px"><span class="tk">${f.t}</span>
+          <div style="font-size:11px;color:var(--dim)">${f.data}</div></div>
+        <div style="font-size:13.5px;line-height:1.5">${(f.assunto||'').replace(/</g,'&lt;')}
+          ${f.link?` <a href="${f.link}" target="_blank" rel="noopener" style="color:var(--accent);font-size:11.5px;white-space:nowrap">documento ↗</a>`:''}</div>
+      </div>`).join('')
+    : nada;
+
+  document.getElementById('m-fund').innerHTML = (M.fund||[]).length
+    ? `<table><tbody>${(M.fund||[]).map(x=>{
+        const piorou = (x.campo==='dívida/EBITDA') ? x.para>x.de : x.para<x.de;
+        return `<tr><td class="tk">${x.t}</td><td style="text-align:left;color:var(--dim)">${x.campo}</td>
+          <td style="text-align:right;color:var(--dim)">${f1(x.de)}</td>
+          <td style="text-align:right;width:24px;color:var(--dim)">→</td>
+          <td style="text-align:right"><b class="${piorou?'neg':'pos'}">${f1(x.para)}</b></td></tr>`}).join('')}</tbody></table>`
+    : nada;
+
+  document.getElementById('m-precos').innerHTML = (M.precos||[]).length
+    ? barras((M.precos||[]).map(p=>({t:p.t,v:p.var})),999,true)
+    : nada;
+
+  const ent=(M.entraram||[]), sai=(M.sairam||[]);
+  document.getElementById('m-entrasai').innerHTML = (ent.length||sai.length)
+    ? `${ent.length?`<div style="margin-bottom:11px"><div style="font-size:11px;color:var(--pos);font-weight:800;letter-spacing:.4px;margin-bottom:5px">ENTRARAM</div>
+        <div>${ent.map(t=>`<span class="pill" style="margin:2px 3px 2px 0">${t}</span>`).join('')}</div></div>`:''}
+       ${sai.length?`<div><div style="font-size:11px;color:var(--neg);font-weight:800;letter-spacing:.4px;margin-bottom:5px">SAÍRAM</div>
+        <div>${sai.map(t=>`<span class="pill" style="margin:2px 3px 2px 0">${t}</span>`).join('')}</div></div>`:''}`
+    : nada;
 }
 
 function renderD(){
@@ -888,7 +988,7 @@ function cards(el,rows,linhas){
 function render(){
   const d=filtA(), req=+document.getElementById('req').value||12;
   cards('t5a', top5A(d), r=>`<dt>L/P</dt><dd>${f1(r.ey)}%</dd><dt>ROE</dt><dd>${f1(r.roe)}%</dd>
-    <dt>Cresc. lucro</dt><dd>${r.vir?'virada':(r.cl==null?'—':f1(r.cl)+'%')}</dd>
+    <dt>Cresc. lucro${r.tri?' '+r.tri:''}</dt><dd>${r.vir?'virada':(r.cl==null?'—':f1(r.cl)+'%')}</dd>
     <dt>Cresc. receita</dt><dd>${r.cr==null?'—':f1(r.cr)+'%'}</dd>
     <dt>Dív/EBITDA</dt><dd>${f2(r.de)}</dd>`);
   document.getElementById('k1').textContent=d.length;
@@ -908,10 +1008,12 @@ function render(){
     // Lucro crescendo muito acima da receita costuma ser ganho não recorrente:
     // marca em vermelho para o leitor não confundir com expansão do negócio.
     const suspeito = r.cl!=null && r.cr!=null && r.cl>30 && r.cl > r.cr*3;
+    // * marca quem caiu para o CAGR anual por não ter ITR comparável.
+    const est = r.anual ? '<span style="color:var(--dim)" title="Sem ITR comparável: CAGR anual 2023–2025">*</span>' : '';
     const cl = r.vir ? '<span class="pos">virada</span>'
              : r.cl==null ? nd
-             : `<span class="${suspeito?'neg':r.cl>0?'pos':''}"${suspeito?' title="Lucro cresce muito acima da receita — típico de ganho não recorrente"':''}>${f1(r.cl)}</span>`;
-    const cr = r.cr==null ? nd : f1(r.cr);
+             : `<span class="${suspeito?'neg':r.cl>0?'pos':''}"${suspeito?' title="Lucro cresce muito acima da receita — típico de ganho não recorrente"':''}>${f1(r.cl)}</span>${est}`;
+    const cr = r.cr==null ? nd : f1(r.cr)+est;
     return `<tr><td class="tk">${r.t}</td><td>${f2(r.p)}</td><td>${f1(r.ey)}</td>
     <td>${f2(teto)}</td><td class="${dist>=0?'pos':'neg'}">${dist>=0?'+':''}${dist.toFixed(0)}</td>
     <td>${f1(r.roe)}</td><td>${cl}</td><td>${cr}</td><td>${f1(r.ml)}</td><td>${r.po}</td>
@@ -1385,8 +1487,24 @@ function agrupa(arr,key){
   const m={}; arr.forEach(x=>{ const k=key(x); m[k]=(m[k]||0)+x.valor });
   return Object.entries(m).map(([k,v])=>({k,v})).sort((a,b)=>b.v-a.v);
 }
-function barras(rows,limite){
+// sinalizado=true desenha a barra a partir de um zero central, para valores que
+// podem ser negativos (variação de preço). Sem isso, queda vira barra curta e
+// alta vira barra longa, o que sugere ordem de grandeza em vez de direção.
+function barras(rows,limite,sinalizado){
   if(!rows.length) return '<div class="cs">sem dados</div>';
+  if(sinalizado){
+    const mx=Math.max(...rows.map(r=>Math.abs(r.v)))||1;
+    return `<div style="display:flex;flex-direction:column;gap:6px">`+rows.map(r=>{
+      const w=Math.abs(r.v)/mx*50, neg=r.v<0;
+      return `<div style="display:grid;grid-template-columns:74px 1fr 56px;gap:9px;align-items:center;font-size:12.5px">
+        <div style="font-weight:600">${r.t}</div>
+        <div style="position:relative;background:var(--line);border-radius:4px;height:15px">
+          <div style="position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--dim);opacity:.5"></div>
+          <div style="position:absolute;top:0;height:100%;border-radius:4px;width:${w}%;
+            ${neg?`right:50%;background:var(--neg)`:`left:50%;background:var(--pos)`}"></div></div>
+        <div style="text-align:right;font-variant-numeric:tabular-nums" class="${neg?'neg':'pos'}">${r.v>0?'+':''}${f1(r.v)}%</div>
+      </div>`}).join('')+`</div>`;
+  }
   const mx=Math.max(...rows.map(r=>r.v))||1;
   return `<div style="display:flex;flex-direction:column;gap:7px">`+rows.map(r=>{
     const w=r.v/mx*100, c=r.v>=limite?'var(--neg)':'var(--accent)';

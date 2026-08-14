@@ -79,9 +79,12 @@ $ja = $ac | Sort-Object { -(P $_.EarningsYield) } | Select-Object -First 60 | Fo
     ey=[math]::Round((P $_.EarningsYield),1); tt=[math]::Round((P $_.PrecoTeto),2)
     roe=[math]::Round((P $_.ROE),1); po=[math]::Round((P $_.Payout),0); de=[math]::Round((P $_.DivLiqEbitda),2)
     ml=[math]::Round((P $_.MargemLiq),1); al=[int]$_.AnosLucro; lu=[math]::Round((P $_.Lucro)/1e9,2)
-    cl=$(if($_.CrescLucro){[math]::Round((P $_.CrescLucro),1)}else{$null})
-    cr=$(if($_.CrescReceita){[math]::Round((P $_.CrescReceita),1)}else{$null})
-    vir=$(if($_.ViradaLucro -eq 'True'){1}else{0}) } }
+    # Trimestral é o que o painel usa; anual fica de reserva e é sinalizado.
+    cl=$(if($_.CrescLucroTri){[math]::Round((P $_.CrescLucroTri),1)}elseif($_.CrescLucro){[math]::Round((P $_.CrescLucro),1)}else{$null})
+    cr=$(if($_.CrescReceitaTri){[math]::Round((P $_.CrescReceitaTri),1)}elseif($_.CrescReceita){[math]::Round((P $_.CrescReceita),1)}else{$null})
+    anual=$(if($_.CrescLucroTri){0}else{1})
+    tri=$(if($_.TrimestreRef){([datetime]$_.TrimestreRef).ToString('MM/yy')}else{$null})
+    vir=$(if($_.ViradaTri -eq 'True'){1}else{0}) } }
 
 $fi = Import-Csv "$Cache\screener_fiis.csv" -Encoding UTF8 | Where-Object {
   $_.Preco -and (P $_.PVP) -ge 0.2 -and (P $_.PVP) -le 3 -and [int]$_.Cotistas -ge 500 }
@@ -170,6 +173,99 @@ if (Test-Path "$Cache\watchlist_eua.csv") {
 }
 L "renda fixa: CDI $($macro.cdi.v)% · $($tes.Count) titulos do Tesouro (base $baseTD)"
 
+# --- Diário de mudanças ------------------------------------------------------
+# Compara com o snapshot da execução anterior. Sem isso o painel mostra um
+# retrato do agora e some com a informação mais útil: o que se moveu.
+$snapFile = "$Cache\snapshot.json"
+$mud = @{ desde=$null; precos=@(); entraram=@(); sairam=@(); fund=@(); fatos=@() }
+$snapAnt = $null
+if (Test-Path $snapFile) {
+  try { $snapAnt = Get-Content $snapFile -Raw -Encoding UTF8 | ConvertFrom-Json } catch {}
+}
+# Snapshot novo: só o que precisa para comparar, não a base inteira.
+$snapNovo = @{
+  quando = (Get-Date).ToString('s')
+  acoes  = @{}; fiis = @{}
+}
+foreach ($x in $ja)  { $snapNovo.acoes[$x.t] = @{ p=$x.p; ey=$x.ey; cl=$x.cl; roe=$x.roe; de=$x.de } }
+foreach ($x in $jf)  { $snapNovo.fiis[$x.t]  = @{ p=$x.p; pvp=$x.pvp; dy=$x.dy; vac=$x.vac } }
+
+if ($snapAnt) {
+  $mud.desde = $snapAnt.quando
+  $antA = @{}; if ($snapAnt.acoes) { $snapAnt.acoes.PSObject.Properties | ForEach-Object { $antA[$_.Name] = $_.Value } }
+  $antF = @{}; if ($snapAnt.fiis)  { $snapAnt.fiis.PSObject.Properties  | ForEach-Object { $antF[$_.Name] = $_.Value } }
+
+  # Preço: variação desde a última execução, ações e FIIs juntos.
+  foreach ($t in $snapNovo.acoes.Keys) {
+    if ($antA.ContainsKey($t) -and $antA[$t].p -and $snapNovo.acoes[$t].p) {
+      $de = [double]$antA[$t].p; $para = [double]$snapNovo.acoes[$t].p
+      if ($de -gt 0 -and [Math]::Abs($para/$de - 1) -ge 0.01) {
+        $mud.precos += @{ t=$t; c='Ação'; de=$de; para=$para; var=[math]::Round(($para/$de-1)*100,1) }
+      }
+    }
+  }
+  foreach ($t in $snapNovo.fiis.Keys) {
+    if ($antF.ContainsKey($t) -and $antF[$t].p -and $snapNovo.fiis[$t].p) {
+      $de = [double]$antF[$t].p; $para = [double]$snapNovo.fiis[$t].p
+      if ($de -gt 0 -and [Math]::Abs($para/$de - 1) -ge 0.01) {
+        $mud.precos += @{ t=$t; c='FII'; de=$de; para=$para; var=[math]::Round(($para/$de-1)*100,1) }
+      }
+    }
+  }
+  $mud.precos = @($mud.precos | Sort-Object { -[Math]::Abs($_.var) } | Select-Object -First 20)
+
+  # Quem entrou e quem saiu da base filtrada.
+  $mud.entraram = @($snapNovo.acoes.Keys | Where-Object { -not $antA.ContainsKey($_) })
+  $mud.sairam   = @($antA.Keys | Where-Object { -not $snapNovo.acoes.ContainsKey($_) })
+
+  # Fundamento mudando significa balanço novo — é o que muda a tese, não o preço.
+  foreach ($t in $snapNovo.acoes.Keys) {
+    if (-not $antA.ContainsKey($t)) { continue }
+    foreach ($cmp in @(@('cl','crescimento do lucro'), @('roe','ROE'), @('de','dívida/EBITDA'))) {
+      $a = $antA[$t].($cmp[0]); $n = $snapNovo.acoes[$t].($cmp[0])
+      if ($null -ne $a -and $null -ne $n -and [Math]::Abs([double]$n - [double]$a) -ge 0.1) {
+        $mud.fund += @{ t=$t; campo=$cmp[1]; de=[double]$a; para=[double]$n }
+      }
+    }
+  }
+  $mud.fund = @($mud.fund | Select-Object -First 25)
+}
+
+# Fatos relevantes recentes das empresas que estão no painel.
+$ipe = Get-ChildItem "$Cache\ipe2026\*.csv" -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($ipe) {
+  $mapaCnpj = @{}
+  if (Test-Path "$Cache\cnpj_ticker.csv") {
+    Import-Csv "$Cache\cnpj_ticker.csv" -Encoding UTF8 | ForEach-Object {
+      $r = $_.Ticker.Substring(0,4); if (-not $mapaCnpj.ContainsKey($_.CNPJ)) { $mapaCnpj[$_.CNPJ] = $r }
+    }
+  }
+  $naBase = @{}; foreach ($x in $ja) { $naBase[$x.t.Substring(0,4)] = $x.t }
+  # Data da CVM vem em ISO (2026-07-31), que ordena lexicograficamente. Comparar
+  # como string evita [datetime]::TryParse com [ref] de variável não tipada, que
+  # falha em resolver a sobrecarga e descarta TODAS as linhas em silêncio.
+  $corte = (Get-Date).AddDays(-30).ToString('yyyy-MM-dd')
+  # Latin-1: ler como UTF-8 quebra acento e o filtro por nome falha calado.
+  $mud.fatos = @(Import-Csv $ipe.FullName -Delimiter ';' -Encoding Default |
+    Where-Object { $_.Categoria -eq 'Fato Relevante' } | ForEach-Object {
+      $c = ($_.CNPJ_Companhia -replace '[^\d]','')
+      $raizT = $mapaCnpj[$c]
+      if ($raizT -and $naBase.ContainsKey($raizT)) {
+        $iso = "$($_.Data_Entrega)"
+        if ($iso.Length -ge 10) {
+          $dia = $iso.Substring(0,10)
+          if ($dia -ge $corte) {
+            @{ t=$naBase[$raizT]; iso=$dia
+               data=($dia.Substring(8,2) + '/' + $dia.Substring(5,2))
+               assunto=$_.Assunto; link=$_.Link_Download }
+          }
+        }
+      }
+    } | Sort-Object iso -Descending | Select-Object -First 20)
+}
+$snapNovo | ConvertTo-Json -Depth 5 -Compress | Set-Content $snapFile -Encoding UTF8
+L "mudancas: $($mud.precos.Count) precos, $($mud.fund.Count) fundamentos, $($mud.fatos.Count) fatos relevantes"
+
 $modelo = Join-Path $raiz "dashboard.template.html"
 $saida  = Join-Path $raiz "dashboard.html"
 if (-not (Test-Path $modelo)) { L "SEM TEMPLATE em $modelo — dashboard nao regenerado."; L "=== fim ==="; return }
@@ -180,6 +276,7 @@ $html = $html.Replace('__RF__',    ($rf | ConvertTo-Json -Depth 6 -Compress))
 $html = $html.Replace('__EUA__',   $(if($eua.Count){ $eua | ConvertTo-Json -Compress } else { '[]' }))
 $html = $html.Replace('__FUNDOS__',$(if($fundos.Count){ $fundos | ConvertTo-Json -Compress } else { '[]' }))
 $html = $html.Replace('__CDI12__', $(if($cdi12){ "$cdi12" } else { 'null' }))
+$html = $html.Replace('__MUD__',   ($mud | ConvertTo-Json -Depth 5 -Compress))
 $html = $html.Replace('__ATUALIZADO__', (Get-Date -Format 'dd/MM/yyyy HH:mm'))
 [IO.File]::WriteAllText($saida, $html, (New-Object Text.UTF8Encoding($false)))
 L "dashboard regenerado: $($ja.Count) acoes, $($jf.Count) fiis"

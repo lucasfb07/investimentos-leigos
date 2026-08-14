@@ -97,6 +97,48 @@ function SomaDesc($tab, $ano, $cnpj, $padrao, $nivel) {
   $s
 }
 
+# ---- Crescimento TRIMESTRAL (ITR) -------------------------------------------
+# O CAGR anual usa exercícios fechados, então fica até 8 meses velho. O ITR traz
+# o acumulado do ano contra o MESMO período do ano anterior (ORDEM_EXERC
+# PENÚLTIMO), que é a comparação trimestral padrão e a mais recente disponível.
+# Só o acumulado (DT_INI em 1º de janeiro): o arquivo também traz o trimestre
+# isolado, e misturar os dois compara períodos de tamanhos diferentes.
+Write-Host "Carregando crescimento trimestral (ITR)..."
+# NÃO chamar de $TRI: colide com o $tri usado logo abaixo, porque PowerShell
+# ignora maiúsculas — a hashtable virava string e o índice quebrava.
+$MapaTri = @{}
+$anoI = $anos[0] + 1
+$fItr = "$Cache\itr$anoI\itr_cia_aberta_DRE_con_$anoI.csv"
+if (Test-Path $fItr) {
+  $linhas = Import-Csv $fItr -Delimiter ';' -Encoding Default |
+            Where-Object { $_.DT_INI_EXERC -match '-01-01$' -and $_.CD_CONTA -in @('3.01','3.11') }
+  $porEmp = @{}
+  foreach ($l in $linhas) {
+    $k = ($l.CNPJ_CIA -replace '[^\d]','')
+    if (-not $porEmp.ContainsKey($k)) { $porEmp[$k] = @() }
+    $porEmp[$k] += $l
+  }
+  foreach ($k in $porEmp.Keys) {
+    $rs = $porEmp[$k]
+    # Trimestre mais recente que a empresa entregou.
+    $tri = ($rs | Where-Object { $_.ORDEM_EXERC -eq 'ÚLTIMO' } | ForEach-Object { $_.DT_FIM_EXERC } | Sort-Object | Select-Object -Last 1)
+    if (-not $tri) { continue }
+    function Val($ordem, $cd, $fim) {
+      $x = $rs | Where-Object { $_.ORDEM_EXERC -eq $ordem -and $_.CD_CONTA -eq $cd -and ($null -eq $fim -or $_.DT_FIM_EXERC -eq $fim) } | Select-Object -First 1
+      if (-not $x) { return $null }
+      $v = N $x.VL_CONTA
+      if ($x.ESCALA_MOEDA -match 'MIL') { $v * 1000 } else { $v }
+    }
+    $lucA = Val 'ÚLTIMO' '3.11' $tri;    $lucP = Val 'PENÚLTIMO' '3.11' $null
+    $recA = Val 'ÚLTIMO' '3.01' $tri;    $recP = Val 'PENÚLTIMO' '3.01' $null
+    # Base negativa não vira percentual — mesma regra do CAGR anual.
+    $cl = if ($null -ne $lucA -and $null -ne $lucP -and $lucP -gt 0) { ($lucA/$lucP - 1)*100 } else { $null }
+    $cr = if ($null -ne $recA -and $null -ne $recP -and $recP -gt 0) { ($recA/$recP - 1)*100 } else { $null }
+    $MapaTri[$k] = @{ tri=$tri; cl=$cl; cr=$cr; virada=($null -ne $lucP -and $lucP -le 0 -and $null -ne $lucA -and $lucA -gt 0) }
+  }
+  Write-Host "  crescimento trimestral para $($MapaTri.Count) empresas"
+} else { Write-Warning "ITR $anoI ausente — crescimento trimestral indisponível" }
+
 $tok = $env:BRAPI_TOKEN; if (-not $tok) { $tok = [Environment]::GetEnvironmentVariable("BRAPI_TOKEN","User") }
 $hdr = @{ Authorization = "Bearer $tok" }
 
@@ -180,6 +222,11 @@ foreach ($e in $alvos) {
     AnosLucro=$anosLucro; DivLiq=$divLiq; Ebitda=$ebitda
     CrescLucro=$cresLucro; CrescReceita=$cresReceita; ViradaLucro=$viradaLucro
     AnosCresc=$per
+    # Trimestral: mais recente, e é o que o filtro usa.
+    CrescLucroTri=$(if($MapaTri.ContainsKey($cnpj)){$MapaTri[$cnpj].cl}else{$null})
+    CrescReceitaTri=$(if($MapaTri.ContainsKey($cnpj)){$MapaTri[$cnpj].cr}else{$null})
+    ViradaTri=$(if($MapaTri.ContainsKey($cnpj)){$MapaTri[$cnpj].virada}else{$false})
+    TrimestreRef=$(if($MapaTri.ContainsKey($cnpj)){$MapaTri[$cnpj].tri}else{$null})
   }
 }
 
@@ -189,20 +236,28 @@ $ok = $res | Where-Object {
   $_.AnosLucro -ge $MinAnosLucro -and
   ($null -eq $_.DivLiqEbitda -or $_.DivLiqEbitda -le $MaxDivida) -and
   ($null -eq $_.Payout -or ($_.Payout -le $MaxPayout -and $_.Payout -ge 0)) -and
-  ($MinCrescLucro -le -999 -or ($null -ne $_.CrescLucro -and $_.CrescLucro -ge $MinCrescLucro))
+  # Filtra pelo TRIMESTRAL, que é o dado mais recente. Cai para o CAGR anual
+  # só quando a empresa não entregou ITR comparável.
+  ($MinCrescLucro -le -999 -or (
+     ($null -ne $_.CrescLucroTri -and $_.CrescLucroTri -ge $MinCrescLucro) -or
+     ($null -eq $_.CrescLucroTri -and $null -ne $_.CrescLucro -and $_.CrescLucro -ge $MinCrescLucro)))
 }
 
 "`n=== Screener de ações — DFP 2025 ==="
 "Critérios: retorno exigido {0}% · dívida líq/EBITDA ≤ {1} · payout ≤ {2}% · anos com lucro ≥ {3}" -f $RetornoExigido,$MaxDivida,$MaxPayout,$MinAnosLucro
 "Avaliadas {0} · passaram {1}  (bancos fora: plano de contas incompatível)" -f $res.Count, $ok.Count
 
-"`n{0,-8}{1,9}{2,9}{3,9}{4,11}{5,11}{6,9}{7,10}{8,7}" -f "Ticker","Preço","L/P %","ROE %","Cresc lucro","Cresc rec.","Payout","Dív/EBITDA","Anos+"
+"`n{0,-8}{1,9}{2,8}{3,8}{4,11}{5,11}{6,9}{7,9}{8,10}" -f "Ticker","Preço","L/P %","ROE %","Luc tri YoY","Rec tri YoY","Trim","Payout","Dív/EBITDA"
 $ok | Sort-Object EarningsYield -Descending | Select-Object -First $Top | ForEach-Object {
-  $cl = if ($_.ViradaLucro) { "virada" } elseif ($null -ne $_.CrescLucro) { "{0:N1}%" -f $_.CrescLucro } else { "—" }
-  $cr = if ($null -ne $_.CrescReceita) { "{0:N1}%" -f $_.CrescReceita } else { "—" }
-  "{0,-8}{1,9:N2}{2,9:N1}{3,9:N1}{4,11}{5,11}{6,9:N0}{7,10:N2}{8,7}" -f `
-    $_.Ticker,$_.Preco,$_.EarningsYield,$_.ROE,$cl,$cr,$_.Payout,$_.DivLiqEbitda,$_.AnosLucro
+  $cl = if ($_.ViradaTri) { "virada" } elseif ($null -ne $_.CrescLucroTri) { "{0:N1}%" -f $_.CrescLucroTri }
+        elseif ($null -ne $_.CrescLucro) { "{0:N1}%*" -f $_.CrescLucro } else { "—" }
+  $cr = if ($null -ne $_.CrescReceitaTri) { "{0:N1}%" -f $_.CrescReceitaTri }
+        elseif ($null -ne $_.CrescReceita) { "{0:N1}%*" -f $_.CrescReceita } else { "—" }
+  $tr = if ($_.TrimestreRef) { ([datetime]$_.TrimestreRef).ToString('MM/yy') } else { "anual" }
+  "{0,-8}{1,9:N2}{2,8:N1}{3,8:N1}{4,11}{5,11}{6,9}{7,9:N0}{8,10:N2}" -f `
+    $_.Ticker,$_.Preco,$_.EarningsYield,$_.ROE,$cl,$cr,$tr,$_.Payout,$_.DivLiqEbitda
 }
+"`n  * = CAGR anual (2023–2025): a empresa não entregou ITR comparável."
 
 $out = "$Cache\screener_acoes.csv"
 $res | Export-Csv $out -NoTypeInformation -Encoding UTF8
