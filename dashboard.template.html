@@ -123,6 +123,24 @@ tbody tr:hover{background:rgba(127,127,127,.07)}
 .t5 .sc{font-size:12px;color:var(--accent);font-weight:700;margin-bottom:7px}
 .t5 dl{margin:0;font-size:11.5px;display:grid;grid-template-columns:auto auto;gap:1px 8px}
 .t5 dt{color:var(--dim)} .t5 dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+/* Seletor de classe: botão grande em vez de <select>, porque a classe define
+   todo o resto do formulário e precisa ser óbvia. */
+.classes{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0 14px}
+.cl{display:inline-flex;align-items:center;gap:7px;padding:9px 15px;border:1px solid var(--line);
+  background:var(--card);color:var(--dim);border-radius:9px;cursor:pointer;font-size:13.5px;
+  font-weight:600;transition:all .15s;font-family:inherit}
+.cl:hover{border-color:var(--accent);color:var(--ink)}
+.cl.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.cl span{font-size:15px;line-height:1}
+.addform{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+.addform .f{flex:0 0 auto}
+.addform .f.grow{flex:1 1 320px;min-width:240px}
+.addform input{padding:10px 12px;font-size:15px;border:1px solid var(--line);border-radius:8px;
+  background:var(--card);color:var(--ink);width:100%}
+.addform input:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
+.addform .f:not(.grow) input{width:130px}
+.addbtn{height:42px;padding:0 22px;font-size:14px}
+.dica{font-size:11.5px;color:var(--dim);margin-top:4px;min-height:15px}
 .wts{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;font-size:12px}
 .wts .f input{min-width:74px}
 details{margin-top:10px;font-size:12.5px;color:var(--dim)}
@@ -538,6 +556,7 @@ footer{margin-top:26px;font-size:12.5px;color:var(--dim);border-top:1px solid va
     <h2>🧭 Para que serve este diagnóstico</h2>
     <p>Olhando ativo por ativo, tudo pode parecer bem. O que só aparece olhando o <span class="k">conjunto</span> é o risco repetido: três FIIs diferentes que respondem à mesma curva de juros, quatro ações do mesmo setor, ou uma posição que sozinha decide o resultado de tudo.</p>
     <p>A <span class="k">diversificação efetiva</span> é o número mais revelador daqui. Ela responde: "minhas posições se comportam como quantas, de fato?". Dez ativos em que um vale metade funcionam como três. Uma lista comprida pode esconder uma aposta só.</p>
+    <p>Cobre as <span class="k">seis classes</span> do painel — ação brasileira, FII, ação americana, fundo, Tesouro e o que você digitar à mão. Papel em dólar entra convertido pelo PTAX, então tudo aparece em reais na mesma régua.</p>
     <p><b>O que ele não faz:</b> dizer o que comprar, vender ou reduzir. Isso depende do seu prazo, do seu objetivo e de quanta queda você aguenta sem vender no pior momento — nada disso está nos números, e fingir o contrário seria o erro mais caro desta página.</p>
   </div>
   <div class="card warn">
@@ -547,21 +566,29 @@ footer{margin-top:26px;font-size:12.5px;color:var(--dim);border-top:1px solid va
 
   <div class="card" style="margin-bottom:16px">
     <div class="ct">Adicionar posição</div>
-    <div class="cs">Escolha o ativo e informe a quantidade. Para o que não está em bolsa — CDB, Tesouro, poupança — use "Outro" e informe o valor.</div>
-    <div class="filters" style="align-items:flex-end">
-      <div class="f"><label>Tipo</label>
-        <select id="ci-tipo" onchange="mudouTipo()">
-          <option value="acao">Ação</option><option value="fii">FII</option><option value="outro">Outro (renda fixa etc.)</option>
-        </select></div>
-      <div class="f" id="w-ativo"><label>Ativo</label>
-        <select id="ci-ativo" style="min-width:230px"></select></div>
-      <div class="f" id="w-nome" style="display:none"><label>Nome</label>
-        <input id="ci-nome" placeholder="Tesouro IPCA+ 2035" style="min-width:230px"></div>
-      <div class="f" id="w-qtd"><label>Quantidade</label>
-        <input type="number" id="ci-qtd" min="1" step="1" placeholder="100"></div>
-      <div class="f" id="w-val" style="display:none"><label>Valor R$</label>
-        <input type="number" id="ci-val" min="1" step="100" placeholder="25000"></div>
-      <button class="tab on" onclick="addPos()" style="height:37px">+ Adicionar</button>
+    <div class="cs">Escolha a classe, digite as primeiras letras do ativo e informe quanto você tem.</div>
+
+    <div class="classes" id="ci-classes">
+      <button class="cl on"  data-tipo="acao"   onclick="escolheTipo(this)"><span>📈</span>Ação BR</button>
+      <button class="cl"     data-tipo="fii"    onclick="escolheTipo(this)"><span>🏢</span>FII</button>
+      <button class="cl"     data-tipo="eua"    onclick="escolheTipo(this)"><span>🇺🇸</span>Ação EUA</button>
+      <button class="cl"     data-tipo="fundo"  onclick="escolheTipo(this)"><span>📦</span>Fundo</button>
+      <button class="cl"     data-tipo="tesouro" onclick="escolheTipo(this)"><span>🏦</span>Tesouro</button>
+      <button class="cl"     data-tipo="outro"  onclick="escolheTipo(this)"><span>✏️</span>Outro</button>
+    </div>
+
+    <div class="addform">
+      <div class="f grow">
+        <label id="lb-ativo">Ativo</label>
+        <input id="ci-ativo" list="lista-ativos" autocomplete="off" placeholder="digite para buscar…">
+        <datalist id="lista-ativos"></datalist>
+        <div class="dica" id="ci-dica"></div>
+      </div>
+      <div class="f">
+        <label id="lb-qtd">Quantidade</label>
+        <input type="number" id="ci-qtd" min="0" step="1" placeholder="100">
+      </div>
+      <button class="tab on addbtn" onclick="addPos()">Adicionar</button>
     </div>
     <div id="cart-erro" style="margin-top:8px"></div>
 
@@ -634,7 +661,7 @@ function setTab(t){
     if(t==='r' && !feito.r){ feito.r=true; guard('Renda fixa',renderRF); }
     if(t==='c' && !feito.c){ feito.c=true; guard('carteira', ()=>{
       idxCarteira();
-      mudouTipo();
+      montaForm();
       // Recupera as posições da última visita — ficam só neste navegador.
       try{ const s=localStorage.getItem('carteira2');
         if(s){ POS=JSON.parse(s)||[] } }catch(e){ POS=[] }
@@ -1245,39 +1272,79 @@ function idxCarteira(){ ACOES.forEach(r=>IDXA[r.t]=r); FIIS.forEach(r=>IDXF[r.t]
 
 let POS=[];   // [{tipo:'acao'|'fii'|'outro', id, qtd?, valor?}]
 
-function mudouTipo(){
-  const t=document.getElementById('ci-tipo').value, ext=t==='outro';
-  document.getElementById('w-ativo').style.display=ext?'none':'';
-  document.getElementById('w-nome').style.display =ext?'':'none';
-  document.getElementById('w-qtd').style.display  =ext?'none':'';
-  document.getElementById('w-val').style.display  =ext?'':'none';
-  const sel=document.getElementById('ci-ativo');
-  const fonte = t==='acao' ? ACOES : FIIS;
-  sel.innerHTML=[...fonte].sort((a,b)=>a.t.localeCompare(b.t))
-    .map(r=>`<option value="${r.t}">${r.t} — R$ ${f2(r.p)}</option>`).join('');
+let tipoAtual='acao';
+// Cada classe define de onde vem a lista, se pede quantidade ou valor, e qual
+// dica aparece embaixo do campo.
+const CLASSES={
+  acao:   {rot:'Ação',      campo:'qtd', lista:()=>ACOES, cod:r=>r.t, desc:r=>`R$ ${f2(r.p)}`,
+           dica:'Quantidade de ações. O valor é calculado pela cotação da base.'},
+  fii:    {rot:'FII',       campo:'qtd', lista:()=>FIIS,  cod:r=>r.t, desc:r=>`R$ ${f2(r.p)}`,
+           dica:'Quantidade de cotas.'},
+  eua:    {rot:'Ação EUA',  campo:'qtd', lista:()=>EUA,   cod:r=>r.t, desc:r=>`US$ ${f2(r.p)}`,
+           dica:()=>{const d=dolar(); return d?`Quantidade de ações. Convertido a R$ ${f2(d)} por dólar.`:'Quantidade de ações (dólar indisponível).'}},
+  fundo:  {rot:'Fundo',     campo:'val', lista:()=>FUNDOS, cod:r=>r.n, desc:r=>`${r.c} · ${f1(r.r)}% em 12m`,
+           dica:'Fundo não tem cotação pública por cota — informe quanto você tem aplicado.'},
+  tesouro:{rot:'Tesouro',   campo:'val', lista:()=>((RF&&RF.tesouro)||[]).map(t=>({t:`${t.n} ${t.v}`,tx:t.tx})),
+           cod:r=>r.t, desc:r=>`${f2(r.tx)}% a.a.`,
+           dica:'Informe o valor atual da posição, como aparece no extrato.'},
+  outro:  {rot:'Outro',     campo:'val', lista:()=>[], cod:r=>r, desc:()=>'',
+           dica:'CDB, LCI, poupança, cripto — qualquer coisa fora das listas. Digite o nome.'}
+};
+function dolar(){ return (RF&&RF.macro&&RF.macro.dolar)?RF.macro.dolar.v:null }
+
+function escolheTipo(btn){ guard('classe', ()=>{
+  document.querySelectorAll('#ci-classes .cl').forEach(b=>b.classList.toggle('on',b===btn));
+  tipoAtual=btn.dataset.tipo;
+  montaForm();
+}) }
+function montaForm(){
+  const C=CLASSES[tipoAtual];
+  const dl=document.getElementById('lista-ativos');
+  const inp=document.getElementById('ci-ativo');
+  const itens=C.lista();
+  // datalist filtra enquanto digita — funciona com mil FIIs, o <select> não.
+  dl.innerHTML=[...itens].sort((a,b)=>String(C.cod(a)).localeCompare(String(C.cod(b))))
+    .map(r=>`<option value="${String(C.cod(r)).replace(/"/g,'')}">${C.desc(r)}</option>`).join('');
+  inp.placeholder = tipoAtual==='outro' ? 'ex.: CDB Banco X 110% do CDI'
+                  : itens.length ? `digite para buscar entre ${itens.length}…` : 'digite o nome';
+  document.getElementById('lb-ativo').textContent = tipoAtual==='outro' ? 'Nome' : 'Ativo';
+  const q=C.campo==='qtd';
+  document.getElementById('lb-qtd').textContent = q ? 'Quantidade' : 'Valor R$';
+  const ci=document.getElementById('ci-qtd');
+  ci.placeholder = q ? '100' : '25000';
+  ci.step = q ? '1' : '100';
+  const dica = typeof C.dica==='function' ? C.dica() : C.dica;
+  document.getElementById('ci-dica').textContent = dica;
 }
 function aviso(msg){
   document.getElementById('cart-erro').innerHTML = msg
     ? `<div style="color:var(--warn);font-size:13px">${msg}</div>` : '';
 }
 function addPos(){ guard('adicionar', ()=>{
-  const t=document.getElementById('ci-tipo').value;
-  if(t==='outro'){
-    const n=document.getElementById('ci-nome').value.trim();
-    const v=+document.getElementById('ci-val').value;
-    if(!n)      return aviso('Informe um nome para a posição.');
-    if(!(v>0))  return aviso('Informe um valor maior que zero.');
-    POS.push({tipo:'outro',id:n,valor:v});
-    document.getElementById('ci-nome').value=''; document.getElementById('ci-val').value='';
-  }else{
-    const tk=document.getElementById('ci-ativo').value;
-    const q=+document.getElementById('ci-qtd').value;
-    if(!tk)    return aviso('Escolha um ativo.');
-    if(!(q>0)) return aviso('Informe uma quantidade maior que zero.');
-    const ja=POS.find(p=>p.id===tk);
-    if(ja) ja.qtd+=q; else POS.push({tipo:t,id:tk,qtd:q});
-    document.getElementById('ci-qtd').value='';
+  const C=CLASSES[tipoAtual];
+  const nome=document.getElementById('ci-ativo').value.trim();
+  const num=+document.getElementById('ci-qtd').value;
+  if(!nome) return aviso('Informe o ativo.');
+  if(!(num>0)) return aviso(C.campo==='qtd' ? 'Informe uma quantidade maior que zero.' : 'Informe um valor maior que zero.');
+  // Ativo de lista tem que existir nela — digitar errado viraria posição
+  // fantasma com valor zero, que some do diagnóstico sem avisar.
+  if(tipoAtual!=='outro'){
+    const itens=C.lista();
+    const achou=itens.some(r=>String(C.cod(r)).toUpperCase()===nome.toUpperCase());
+    if(!achou) return aviso(`"${nome}" não está na lista de ${C.rot}. Use "Outro" para incluir mesmo assim.`);
   }
+  const chave=nome.toUpperCase();
+  const ja=POS.find(p=>p.tipo===tipoAtual && String(p.id).toUpperCase()===chave);
+  if(ja){
+    if(C.campo==='qtd') ja.qtd=(ja.qtd||0)+num; else ja.valor=(ja.valor||0)+num;
+  }else{
+    const p={tipo:tipoAtual,id:nome};
+    if(C.campo==='qtd') p.qtd=num; else p.valor=num;
+    POS.push(p);
+  }
+  document.getElementById('ci-ativo').value='';
+  document.getElementById('ci-qtd').value='';
+  document.getElementById('ci-ativo').focus();
   aviso(''); salvar(); analisarCarteira();
 }) }
 function removePos(i){ POS.splice(i,1); salvar(); analisarCarteira(); }
@@ -1363,10 +1430,15 @@ function lerCsvB3(txt){
 }
 
 function exemploCarteira(){
+  // Cobre as seis classes, para o diagnóstico mostrar o que sabe fazer.
+  const t0=((RF&&RF.tesouro)||[])[0];
+  const f0=(FUNDOS||[])[0];
   POS=[{tipo:'acao',id:'PETR4',qtd:200},{tipo:'acao',id:'WEGE3',qtd:150},
        {tipo:'fii',id:'MXRF11',qtd:2000},{tipo:'fii',id:'HGLG11',qtd:40},
-       {tipo:'outro',id:'Tesouro IPCA+ 2035',valor:25000},
-       {tipo:'outro',id:'CDB 110% do CDI',valor:30000}];
+       {tipo:'eua',id:'AAPL',qtd:20}];
+  if(t0) POS.push({tipo:'tesouro',id:`${t0.n} ${t0.v}`,valor:25000});
+  if(f0) POS.push({tipo:'fundo',id:f0.n,valor:18000});
+  POS.push({tipo:'outro',id:'CDB 110% do CDI',valor:30000});
   salvar(); analisarCarteira();
 }
 function limparCarteira(){
@@ -1376,13 +1448,31 @@ function limparCarteira(){
 }
 // Converte POS (o que o usuário informou) em itens com valor e indicadores.
 function materializa(){
+  const usd=dolar();
   return POS.map(p=>{
-    if(p.tipo==='outro') return {nome:p.id,valor:p.valor,classe:'Renda fixa / outros',fonte:'valor'};
-    const d = p.tipo==='acao' ? IDXA[p.id] : IDXF[p.id];
-    if(!d) return {nome:p.id,valor:0,classe:'—',fonte:'erro'};
-    return {nome:p.id,ticker:p.id,qtd:p.qtd,preco:d.p,valor:p.qtd*d.p,
-            classe:p.tipo==='acao'?'Ação':'FII',dados:d,
-            tipoFii:p.tipo==='fii'?d.tp:null,setor:p.tipo==='acao'?d.s:null,fonte:'base'};
+    const up=String(p.id).toUpperCase();
+    if(p.tipo==='acao'||p.tipo==='fii'){
+      const d = p.tipo==='acao' ? IDXA[p.id] : IDXF[p.id];
+      if(!d) return {nome:p.id,valor:0,classe:'—',fonte:'erro'};
+      return {nome:p.id,ticker:p.id,qtd:p.qtd,preco:d.p,valor:p.qtd*d.p,
+              classe:p.tipo==='acao'?'Ação BR':'FII',dados:d,
+              tipoFii:p.tipo==='fii'?d.tp:null,setor:p.tipo==='acao'?d.s:null,fonte:'base'};
+    }
+    if(p.tipo==='eua'){
+      const d=(EUA||[]).find(r=>r.t.toUpperCase()===up);
+      if(!d||!usd) return {nome:p.id,valor:0,classe:'Ação EUA',fonte:'erro'};
+      // Convertido pelo PTAX: a posição é em dólar, a carteira é em real.
+      return {nome:p.id,ticker:p.id,qtd:p.qtd,preco:d.p,valor:p.qtd*d.p*usd,
+              classe:'Ação EUA',dados:d,setor:d.s,cambial:true,fonte:'base'};
+    }
+    if(p.tipo==='fundo'){
+      const d=(FUNDOS||[]).find(r=>r.n.toUpperCase()===up);
+      return {nome:p.id,valor:p.valor,classe:'Fundo',dadosFundo:d,fonte:'valor'};
+    }
+    if(p.tipo==='tesouro'){
+      return {nome:p.id,valor:p.valor,classe:'Tesouro',fonte:'valor',rendaFixa:true};
+    }
+    return {nome:p.id,valor:p.valor,classe:'Outros',fonte:'valor'};
   });
 }
 function renderLista(itens,tot){
@@ -1436,9 +1526,22 @@ function analisarCarteira(){ guard('carteira', ()=>{
   const poAlto=acoes.filter(x=>x.dados && x.dados.po>100);
   poAlto.forEach(x=>obs.push({n:'media',t:`<b>${x.nome}</b> distribuiu <b>${x.dados.po}%</b> do lucro. Acima de 100% significa pagar além do que ganhou no exercício.`}));
 
-  const rendaFixa=itens.filter(x=>['Tesouro','Renda fixa bancária','Crédito privado'].includes(x.classe));
+  const rendaFixa=itens.filter(x=>x.rendaFixa || x.classe==='Tesouro' || x.classe==='Outros');
   const pctRF=rendaFixa.reduce((s,x)=>s+x.pct,0);
   const pctRV=100-pctRF;
+
+  // Exposição cambial: a posição em dólar tem duas apostas embutidas.
+  const emDolar=itens.filter(x=>x.cambial);
+  const pctUSD=emDolar.reduce((s,x)=>s+x.pct,0);
+  if(pctUSD>0) obs.push({n:pctUSD>=30?'alta':'media',
+    t:`<b>${f1(pctUSD)}%</b> em ações americanas, cotadas em dólar. São duas apostas ao mesmo tempo: a empresa e a moeda. Se o dólar cair 10%, essa fatia perde 10% em reais mesmo com as ações de pé.`});
+
+  // Fundo cobra taxa e já vem líquido dela — mas o custo existe e não aparece.
+  const fundos=itens.filter(x=>x.classe==='Fundo');
+  if(fundos.length){
+    const pf=fundos.reduce((s,x)=>s+x.pct,0);
+    obs.push({n:'info',t:`<b>${f1(pf)}%</b> em fundos. O retorno deles já é líquido de taxa de administração, mas não de imposto — fundo comum tem come-cotas semestral.`});
+  }
   if(pctRF===0 && itens.length>2) obs.push({n:'info',t:`Nenhuma posição em renda fixa identificada. Toda a carteira oscila com o mercado.`});
   if(pctRF>0) obs.push({n:'info',t:`Divisão: <b>${f1(pctRV)}%</b> em renda variável, <b>${f1(pctRF)}%</b> em renda fixa. Não existe proporção "certa" — ela depende do seu prazo e do quanto de oscilação você suporta sem vender no pior momento.`});
 
@@ -1483,8 +1586,10 @@ function analisarCarteira(){ guard('carteira', ()=>{
       <div class="cs">Os mesmos indicadores das outras abas, só para o que você tem.</div>
       <table><tbody>${itens.map(x=>{
         let ind='<span style="color:var(--dim)">sem indicador na base</span>';
-        if(x.classe==='Ação'&&x.dados) ind=`L/P ${f1(x.dados.ey)}% · ROE ${f1(x.dados.roe)}% · dív ${f2(x.dados.de)}×`;
-        if(x.classe==='FII'&&x.dados) ind=`P/VP ${x.dados.pvp.toFixed(2)} · DY ${f1(x.dados.dy)}%`+(x.dados.vac!=null?` · vac ${f1(x.dados.vac)}%`:'');
+        if(x.classe==='Ação BR'&&x.dados) ind=`L/P ${f1(x.dados.ey)}% · ROE ${f1(x.dados.roe)}% · dív ${f2(x.dados.de)}×`;
+        if(x.classe==='FII'&&x.dados) ind=`P/VP ${x.dados.pvp.toFixed(2)} · ret total ${x.dados.rt==null?'—':f1(x.dados.rt)+'%'}`+(x.dados.ero>0?` · ${f1(x.dados.ero)}% do capital`:'');
+        if(x.classe==='Ação EUA'&&x.dados) ind=`L/P ${f1(x.dados.ey)}% · ROE ${x.dados.roe==null?'—':f1(x.dados.roe)+'%'} · beta ${x.dados.be==null?'—':f2(x.dados.be)}`;
+        if(x.classe==='Fundo'&&x.dadosFundo) ind=`${f1(x.dadosFundo.r)}% em 12m · vol ${x.dadosFundo.v==null?'—':f1(x.dadosFundo.v)+'%'}`;
         return `<tr><td class="tk">${x.nome}</td>
           <td style="text-align:right;font-size:12px;color:var(--dim)">${ind}</td></tr>`}).join('')}
       </tbody></table>

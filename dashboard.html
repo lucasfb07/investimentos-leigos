@@ -123,6 +123,24 @@ tbody tr:hover{background:rgba(127,127,127,.07)}
 .t5 .sc{font-size:12px;color:var(--accent);font-weight:700;margin-bottom:7px}
 .t5 dl{margin:0;font-size:11.5px;display:grid;grid-template-columns:auto auto;gap:1px 8px}
 .t5 dt{color:var(--dim)} .t5 dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+/* Seletor de classe: botão grande em vez de <select>, porque a classe define
+   todo o resto do formulário e precisa ser óbvia. */
+.classes{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0 14px}
+.cl{display:inline-flex;align-items:center;gap:7px;padding:9px 15px;border:1px solid var(--line);
+  background:var(--card);color:var(--dim);border-radius:9px;cursor:pointer;font-size:13.5px;
+  font-weight:600;transition:all .15s;font-family:inherit}
+.cl:hover{border-color:var(--accent);color:var(--ink)}
+.cl.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.cl span{font-size:15px;line-height:1}
+.addform{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+.addform .f{flex:0 0 auto}
+.addform .f.grow{flex:1 1 320px;min-width:240px}
+.addform input{padding:10px 12px;font-size:15px;border:1px solid var(--line);border-radius:8px;
+  background:var(--card);color:var(--ink);width:100%}
+.addform input:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
+.addform .f:not(.grow) input{width:130px}
+.addbtn{height:42px;padding:0 22px;font-size:14px}
+.dica{font-size:11.5px;color:var(--dim);margin-top:4px;min-height:15px}
 .wts{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;font-size:12px}
 .wts .f input{min-width:74px}
 details{margin-top:10px;font-size:12.5px;color:var(--dim)}
@@ -138,7 +156,7 @@ footer{margin-top:26px;font-size:12.5px;color:var(--dim);border-top:1px solid va
     <span class="chip"><b>1.045</b> FIIs</span>
     <span class="chip"><b>437</b> empresas</span>
     <span class="chip"><b>16</b> títulos do Tesouro</span>
-    <span class="chip">atualizado <b>15/08/2026 13:12</b></span>
+    <span class="chip">atualizado <b>15/08/2026 13:37</b></span>
   </div>
 </div></div>
 
@@ -538,6 +556,7 @@ footer{margin-top:26px;font-size:12.5px;color:var(--dim);border-top:1px solid va
     <h2>🧭 Para que serve este diagnóstico</h2>
     <p>Olhando ativo por ativo, tudo pode parecer bem. O que só aparece olhando o <span class="k">conjunto</span> é o risco repetido: três FIIs diferentes que respondem à mesma curva de juros, quatro ações do mesmo setor, ou uma posição que sozinha decide o resultado de tudo.</p>
     <p>A <span class="k">diversificação efetiva</span> é o número mais revelador daqui. Ela responde: "minhas posições se comportam como quantas, de fato?". Dez ativos em que um vale metade funcionam como três. Uma lista comprida pode esconder uma aposta só.</p>
+    <p>Cobre as <span class="k">seis classes</span> do painel — ação brasileira, FII, ação americana, fundo, Tesouro e o que você digitar à mão. Papel em dólar entra convertido pelo PTAX, então tudo aparece em reais na mesma régua.</p>
     <p><b>O que ele não faz:</b> dizer o que comprar, vender ou reduzir. Isso depende do seu prazo, do seu objetivo e de quanta queda você aguenta sem vender no pior momento — nada disso está nos números, e fingir o contrário seria o erro mais caro desta página.</p>
   </div>
   <div class="card warn">
@@ -547,21 +566,29 @@ footer{margin-top:26px;font-size:12.5px;color:var(--dim);border-top:1px solid va
 
   <div class="card" style="margin-bottom:16px">
     <div class="ct">Adicionar posição</div>
-    <div class="cs">Escolha o ativo e informe a quantidade. Para o que não está em bolsa — CDB, Tesouro, poupança — use "Outro" e informe o valor.</div>
-    <div class="filters" style="align-items:flex-end">
-      <div class="f"><label>Tipo</label>
-        <select id="ci-tipo" onchange="mudouTipo()">
-          <option value="acao">Ação</option><option value="fii">FII</option><option value="outro">Outro (renda fixa etc.)</option>
-        </select></div>
-      <div class="f" id="w-ativo"><label>Ativo</label>
-        <select id="ci-ativo" style="min-width:230px"></select></div>
-      <div class="f" id="w-nome" style="display:none"><label>Nome</label>
-        <input id="ci-nome" placeholder="Tesouro IPCA+ 2035" style="min-width:230px"></div>
-      <div class="f" id="w-qtd"><label>Quantidade</label>
-        <input type="number" id="ci-qtd" min="1" step="1" placeholder="100"></div>
-      <div class="f" id="w-val" style="display:none"><label>Valor R$</label>
-        <input type="number" id="ci-val" min="1" step="100" placeholder="25000"></div>
-      <button class="tab on" onclick="addPos()" style="height:37px">+ Adicionar</button>
+    <div class="cs">Escolha a classe, digite as primeiras letras do ativo e informe quanto você tem.</div>
+
+    <div class="classes" id="ci-classes">
+      <button class="cl on"  data-tipo="acao"   onclick="escolheTipo(this)"><span>📈</span>Ação BR</button>
+      <button class="cl"     data-tipo="fii"    onclick="escolheTipo(this)"><span>🏢</span>FII</button>
+      <button class="cl"     data-tipo="eua"    onclick="escolheTipo(this)"><span>🇺🇸</span>Ação EUA</button>
+      <button class="cl"     data-tipo="fundo"  onclick="escolheTipo(this)"><span>📦</span>Fundo</button>
+      <button class="cl"     data-tipo="tesouro" onclick="escolheTipo(this)"><span>🏦</span>Tesouro</button>
+      <button class="cl"     data-tipo="outro"  onclick="escolheTipo(this)"><span>✏️</span>Outro</button>
+    </div>
+
+    <div class="addform">
+      <div class="f grow">
+        <label id="lb-ativo">Ativo</label>
+        <input id="ci-ativo" list="lista-ativos" autocomplete="off" placeholder="digite para buscar…">
+        <datalist id="lista-ativos"></datalist>
+        <div class="dica" id="ci-dica"></div>
+      </div>
+      <div class="f">
+        <label id="lb-qtd">Quantidade</label>
+        <input type="number" id="ci-qtd" min="0" step="1" placeholder="100">
+      </div>
+      <button class="tab on addbtn" onclick="addPos()">Adicionar</button>
     </div>
     <div id="cart-erro" style="margin-top:8px"></div>
 
@@ -596,7 +623,7 @@ const RF    = {"focus":{"Selic":[{"v":13.75,"ano":"2026"},{"v":12,"ano":"2027"},
 const EUA   = [{"t":"AAPL","n":"Apple Inc.","s":"TECHNOLOGY","p":305.93,"ey":2.8,"pl":36,"pvp":42.5,"roe":148.8,"mg":27.6,"dy":0.34,"be":1.09,"ee":27.4},{"t":"MSFT","n":"Microsoft Corporation","s":"TECHNOLOGY","p":495.4,"ey":3.6,"pl":27.8,"pvp":8.4,"roe":34,"mg":40.3,"dy":0.73,"be":1.1,"ee":17.8},{"t":"GOOGL","n":"Alphabet Inc Class A","s":"COMMUNICATION SERVICES","p":345.9,"ey":5.6,"pl":17.8,"pvp":7,"roe":48.7,"mg":54.8,"dy":0.24,"be":1.24,"ee":12.9},{"t":"AMZN","n":"Amazon.com Inc","s":"CONSUMER CYCLICAL","p":262.65,"ey":4.5,"pl":22.1,"pvp":5.4,"roe":30.6,"mg":17.4,"dy":null,"be":1.45,"ee":12},{"t":"NVDA","n":"NVIDIA Corporation","s":"TECHNOLOGY","p":225.16,"ey":2.9,"pl":34.2,"pvp":27.8,"roe":114.3,"mg":63,"dy":0.02,"be":2.22,"ee":27.8},{"t":"META","n":"Meta Platforms Inc.","s":"COMMUNICATION SERVICES","p":589.85,"ey":4.5,"pl":22.3,"pvp":5.8,"roe":29.8,"mg":29.8,"dy":0.36,"be":1.24,"ee":13.6},{"t":"BRK-B","n":"Berkshire Hathaway Inc","s":"FINANCIAL SERVICES","p":504.03,"ey":6.4,"pl":15.6,"pvp":1.5,"roe":10.5,"mg":19.3,"dy":null,"be":0.61,"ee":null},{"t":"JNJ","n":"Johnson \u0026 Johnson","s":"HEALTHCARE","p":260.35,"ey":3.3,"pl":30,"pvp":7.4,"roe":25.7,"mg":21.5,"dy":2.04,"be":0.23,"ee":19.2},{"t":"V","n":"Visa Inc. Class A","s":"FINANCIAL SERVICES","p":364.15,"ey":3.2,"pl":30.8,"pvp":19.5,"roe":61.2,"mg":50.8,"dy":0.72,"be":0.76,"ee":23.4},{"t":"JPM","n":"JPMorgan Chase \u0026 Co","s":"FINANCIAL SERVICES","p":362.84,"ey":6.5,"pl":15.3,"pvp":2.7,"roe":17.8,"mg":34.9,"dy":1.68,"be":0.98,"ee":null},{"t":"XOM","n":"Exxon Mobil Corp","s":"ENERGY","p":160.1,"ey":3.9,"pl":25.8,"pvp":2.5,"roe":12.6,"mg":9.1,"dy":2.63,"be":0.17,"ee":10.5},{"t":"KO","n":"The Coca-Cola Company","s":"CONSUMER DEFENSIVE","p":87.71,"ey":3.8,"pl":26.1,"pvp":10.4,"roe":42,"mg":28.6,"dy":2.39,"be":0.34,"ee":20.3},{"t":"PG","n":"Procter \u0026 Gamble Company","s":"CONSUMER DEFENSIVE","p":144.55,"ey":4.5,"pl":22,"pvp":6.4,"roe":30.3,"mg":18.4,"dy":2.9,"be":0.38,"ee":14.9},{"t":"UNH","n":"UnitedHealth Group Incorporated","s":"HEALTHCARE","p":401.73,"ey":3.3,"pl":30.7,"pvp":3.8,"roe":14.1,"mg":3.1,"dy":1.09,"be":0.63,"ee":18.2},{"t":"HD","n":"The Home Depot Inc","s":"CONSUMER CYCLICAL","p":338.86,"ey":4,"pl":25.3,"pvp":25.6,"roe":128.4,"mg":8.4,"dy":1.98,"be":0.96,"ee":16.6}];
 const FUNDOS= [{"n":"ITAÚ FIC DE FUNDOS INCENTIVADOS DE INVEST FINANCEIRO EM INFRAESTR CDI RF CRÉD PRIV - RESP LIMITADA","c":"Renda Fixa","r":4.41,"cdi":30,"v":7.8,"pl":1041,"ct":12307,"b":"DI de um dia"},{"n":"ITAÚ FIF - CIC FIF INCENTIVADOS EM INFRA RF CRED PRIV - RESP LIMITADA","c":"Renda Fixa","r":4.12,"cdi":28,"v":9.6,"pl":1563,"ct":34504,"b":"Índice de Mercado Andima todas NTN-B"},{"n":"KINEA INFRA FIF CIC DE FUNDOS INCENTIVADOS DE INVESTIMENTO EM INFRA RF CRED PRIV RESP LIMITADA","c":"Renda Fixa","r":3.27,"cdi":22,"v":8.1,"pl":2561,"ct":43763,"b":"Índice de Mercado Andima todas NTN-B"},{"n":"JGP ECOSSISTEMA FI EM COTAS DE FUNDOS INCENT DE INV EM INFRA II RENDA FIXA CRED PRIV RESP LIMITADA","c":"Renda Fixa","r":2.67,"cdi":18,"v":2.7,"pl":305,"ct":6987,"b":"Não se aplica"},{"n":"CAPITANIA INFRA RENDA 90 FUNDO INCENTIVADO DE INVESTIMENTO EM INFRAESTRUTURA RENDA FIXA CRÉDITO PRIV","c":"Renda Fixa","r":2.6,"cdi":18,"v":3.6,"pl":524,"ct":10609,"b":"DI de um dia"},{"n":"SPARTA INFRA CDI FI FINANCEIRO EM COTAS DE FUNDOS INCENTIVADOS DE INVESTIMENTO EM INFRAESTRUTURA RF","c":"Renda Fixa","r":2.4,"cdi":16,"v":3.5,"pl":2843,"ct":67919,"b":"Não se aplica"},{"n":"ITAÚ DEBÊNTURES INCENTIVADAS PRÉ TARGET 2029 SHIFT FIF INCENTIVADO INFRA RF CRED PRIV RESP LIMITADA","c":"Renda Fixa","r":1.97,"cdi":14,"v":5.5,"pl":353,"ct":653,"b":"DI de um dia"},{"n":"BTG PACTUAL DÍVIDA INFRA FIF EM COTAS DE FUNDOS INCENTIVADOS DE INVESTIMENTO EM INFRA RENDA FIXA","c":"Renda Fixa","r":1.92,"cdi":13,"v":6.6,"pl":1517,"ct":32721,"b":"Não se aplica"},{"n":"VINCI CRÉDITO FI EM COTAS DE FUNDOS INCENTIVADOS DE INVESTIMENTO EM INFRAESTRUTURA RENDA FIXA","c":"Renda Fixa","r":1.45,"cdi":10,"v":2.7,"pl":497,"ct":2215,"b":"Não se aplica"},{"n":"SPARTA INFRA FI EM COTAS DE FUNDOS INCENTIVADOS DE INVESTIMENTO EM INFRAESTRUTURA RENDA FIXA","c":"Renda Fixa","r":1.3,"cdi":9,"v":2.2,"pl":2082,"ct":91591,"b":"Índice de Mercado Andima todas NTN-B"},{"n":"SAFRA INFRA PREFIXADO FIF INV EM INFRAESTRUTURA CIC DE INV EM INFRA RENDA FIXA RESP LIMITADA","c":"Renda Fixa","r":1.15,"cdi":8,"v":7.7,"pl":382,"ct":725,"b":"DI de um dia"},{"n":"SAFRA INFRA PREFIXADO CARTEIRA MASTER FIF INV EM INFRAESTRUTURA CI EM INFRA RF RESP LIMITADA","c":"Renda Fixa","r":1.06,"cdi":7,"v":7.8,"pl":481,"ct":835,"b":"DI de um dia"},{"n":"CAPITANIA FI FINANCEIRO EM COTAS DE FUNDOS INCENTIVADOS DE INVESTIMENTO EM INFRAESTRUTURA RENDA FIXA","c":"Renda Fixa","r":0.99,"cdi":7,"v":6.5,"pl":1278,"ct":37050,"b":""},{"n":"BRADESCO FIF - CIC RF INCENTIVADO DE INVESTIMENTO EM INFRAESTRUTURA CDI CRED PRIV - RESP LIMITADA","c":"Renda Fixa","r":0.66,"cdi":5,"v":6.2,"pl":491,"ct":6771,"b":"Não se aplica"},{"n":"BOCAINA INFRA FI EM COTAS DE FUNDOS INCENTIVADOS DE INVESTIMENTO EM INFRAESTRUTURA RENDA FIXA","c":"Renda Fixa","r":0.34,"cdi":2,"v":9.8,"pl":557,"ct":24096,"b":""},{"n":"ITAÚ LUMINA PLUS DEB INCENTIVADAS FIIF CIC RF CRED PRIV LP RESPONSABILIDADE LIMITADA","c":"Renda Fixa","r":-0.43,"cdi":-3,"v":8.1,"pl":379,"ct":2001,"b":"DI de um dia"},{"n":"ITAÚ JANEIRO INFRA FIF INCENTIVADO EM INFRA DA CIC RF CRÉD PRIV LP RESP LIMITADA","c":"Renda Fixa","r":-0.44,"cdi":-3,"v":7.9,"pl":1417,"ct":6098,"b":"DI de um dia"},{"n":"VINLAND FUNDO INCENTIVADO EM INVESTIMENTO EM DEB DE INFRA ATIVO FIF RF CRÉD PRIV LP RESP LIMITADA","c":"Renda Fixa","r":-0.66,"cdi":-5,"v":6.7,"pl":1125,"ct":16588,"b":"DI de um dia"},{"n":"LEGACY CAPITAL RENDA FIXA INFRA SELEÇÃO FC DE FII EM DEB DE INFRA CRÉD PRIV LP RESP LIMITADA","c":"Renda Fixa","r":-0.71,"cdi":-5,"v":6.2,"pl":944,"ct":7276,"b":"DI de um dia"},{"n":"VINLAND RENDA FIXA INFRA SELEÇÃO FC DE FIF INCENTIVADO EM DEB DE INFRA CRÉD PRIV LP RESP LIMITADA","c":"Renda Fixa","r":-0.72,"cdi":-5,"v":6.5,"pl":2970,"ct":23375,"b":"DI de um dia"},{"n":"ITAÚ ARTAX INFRA FIF INCENTIVADO INFRA CIC RF CRED PRIV LP - RESP LIMITADA","c":"Renda Fixa","r":-0.93,"cdi":-6,"v":8.5,"pl":1079,"ct":7366,"b":"DI de um dia"},{"n":"SPARTA DEB INC ESTRAT FUNDOS INCENTIVADOS DE INVEST FINANCEIRO EM INFRA RENDA FIXA - RESP LIMITADA","c":"Renda Fixa","r":-1.03,"cdi":-7,"v":7.3,"pl":410,"ct":6096,"b":"OUTROS"},{"n":"ABSOLUTE HIDRA CDI PLUS SELEÇÃO FIF INCENTIVADO EM INFRA DA CIC RF CRÉD PRIV RESP LIMITADA","c":"Renda Fixa","r":-1.23,"cdi":-8,"v":7,"pl":735,"ct":5022,"b":"DI de um dia"},{"n":"MANAGER ARX HEDGE S FIF INVESTIMENTO EM INFRA CIC DE INV EM INFRAESTRUTURA RENDA FIXA RESP LIMITADA","c":"Renda Fixa","r":-1.45,"cdi":-10,"v":7.7,"pl":1294,"ct":5390,"b":"DI de um dia"},{"n":"RB CAPITAL FIC DE FUNDO INCENTIVADO DE INVESTIMENTO FINANCEIRO EM INFRA RENDA FIXA - RESP LTDA","c":"Renda Fixa","r":-1.49,"cdi":-10,"v":6.8,"pl":899,"ct":10693,"b":"DI de um dia"},{"n":"BB RF DEBÊNTURES INCENTIVADAS CDI FIC FIF INFRAESTRUTURA CRÉDITO PRIVADO RESPONSABILIDADE LIMITADA","c":"Renda Fixa","r":-1.51,"cdi":-10,"v":7.3,"pl":3792,"ct":41440,"b":"DI de um dia"},{"n":"ITAÚ DEB INCENTIVADAS IMA-B FIF INCENTIVADO EM INFRA DA CIC RENDA FIXA CRÉDITO PRIVADO RESP LIMITADA","c":"Renda Fixa","r":-1.54,"cdi":-11,"v":6,"pl":1449,"ct":6571,"b":"Índice de Mercado Andima todas NTN-B"},{"n":"SAFRA INFRA RENDA FIXA ATIVO FIF INVEST EM INFRA CIC DE INV EM INFRA RF LONGO PRAZO RESP LIMITADA","c":"Renda Fixa","r":-1.55,"cdi":-11,"v":7.9,"pl":1093,"ct":5524,"b":"DI de um dia"},{"n":"ITAÚ KINEA DEBÊNTURES INCENTIVADAS FIF INCENTIVADO INFRA CIC RF CRED PRIV LP - RESP LIMITADA","c":"Renda Fixa","r":-1.64,"cdi":-11,"v":7.9,"pl":315,"ct":1608,"b":"DI de um dia"},{"n":"ABSOLUTE HIDRA SELEÇÃO CDI FIF DA CIC INCENTIVADOS DE INV EM INFRA RF CRÉDITO PRIVADO","c":"Renda Fixa","r":-1.71,"cdi":-12,"v":7.4,"pl":5298,"ct":30654,"b":"DI de um dia"},{"n":"SANTANDER INVESTIMENTO EM INFRAESTRUTURA MULTIESTRATÉGIA RF CRÉDITO PRIVADO CIC FIF RESP LIMITADA","c":"Renda Fixa","r":-1.73,"cdi":-12,"v":7.9,"pl":662,"ct":3940,"b":"DI de um dia"},{"n":"SICREDI FIF INCENTIVADO EM DEBÊNTURES DE INFRAESTRUTURA CDI RF CRED PRIV - RESPONSABILIDADE LIMITADA","c":"Renda Fixa","r":-1.73,"cdi":-12,"v":8.6,"pl":1084,"ct":8970,"b":"DI de um dia"},{"n":"SAFRA INFRA CDI EXCLUSIVE FIF INV EM INFRAESTRUTURA CIC DE INV EM INFRA RF LONGO PRAZO RESP LIMITADA","c":"Renda Fixa","r":-1.76,"cdi":-12,"v":8.2,"pl":1162,"ct":847,"b":"DI de um dia"},{"n":"CAPITÂNIA PREMIUM 45 FIC DE FIF RENDA FIXA CRÉDITO PRIVADO LONGO PRAZO - RESPONSABILIDADE LIMITADA","c":"Renda Fixa","r":-1.83,"cdi":-13,"v":5.2,"pl":461,"ct":14923,"b":"DI de um dia"},{"n":"AZ QUEST DEB INCENTIVADAS FIC DE FIF INCENTIVADO DE INVESTIMENTO EM INFRA RENDA FIXA CRÉDITO PRIVADO","c":"Renda Fixa","r":-1.85,"cdi":-13,"v":6.4,"pl":420,"ct":8221,"b":"Não se aplica"},{"n":"XP DEB INCENT IMAB CRÉD PRIV FUNDO INCENTIVADO DE INV FINANCEIRO EM INFRA RENDA FIXA - RESP LTDA","c":"Renda Fixa","r":-1.87,"cdi":-13,"v":6.7,"pl":481,"ct":14502,"b":"Índice de Mercado Andima todas NTN-B"},{"n":"ITAÚ ACTION DEB INCENTIVADAS FIF INCENTIVADO INFRA CIC RF CRED PRIV LP - RESP LIMITADA","c":"Renda Fixa","r":-1.88,"cdi":-13,"v":8.1,"pl":562,"ct":10198,"b":"Índice de Mercado Andima todas NTN-B"},{"n":"BTG PACTUAL TOTAL FUNDO INCENTIVADO DE INVESTIMENTO EM INFRAESTRUTURA RENDA FIXA","c":"Renda Fixa","r":-1.93,"cdi":-13,"v":7.6,"pl":2802,"ct":25710,"b":"Não se aplica"},{"n":"ABSOLUTE HIDRA CDI FI EM COTAS DE FUNDOS INCENTIVADOS DE INVESTIMENTO EM INFRAESTRUTURA RENDA FIXA","c":"Renda Fixa","r":-1.95,"cdi":-13,"v":7.4,"pl":3132,"ct":31957,"b":"Não se aplica"},{"n":"SAFRA CAPITAL MARKET INFRA PROFIT II FIF INV EM INFRA CIC DE INV EM INFRA RENDA FIXA RESP LIMITADA","c":"Renda Fixa","r":-1.97,"cdi":-14,"v":7.9,"pl":4096,"ct":19024,"b":"DI de um dia"},{"n":"HASHDEX 100 NASDAQ CRYPTO INDEX FUNDO DE INVESTIMENTO MULTIMERCADO","c":"Multimercado","r":1573.39,"cdi":10797,"v":2346.9,"pl":459,"ct":35561,"b":"Não se aplica"},{"n":"KAPITALO K10 FUNDO DE INVESTIMENTO FINANCEIRO EM QUOTAS DE FUNDOS DE INVESTIMENTO MULTIMERCADO","c":"Multimercado","r":162.88,"cdi":1118,"v":355.5,"pl":1327,"ct":9650,"b":"DI de um dia"},{"n":"HASHDEX BITCOIN FUNDO DE INVESTIMENTO MULTIMERCADO","c":"Multimercado","r":30.04,"cdi":206,"v":81.7,"pl":588,"ct":67288,"b":"OUTROS"},{"n":"ITAÚ INDEX BITCOIN USD FIF DA CLASSE DE INVESTIMENTO EM COTAS MULTIMERCADO RESPONSABILIDADE LIMITADA","c":"Multimercado","r":29.04,"cdi":199,"v":80.8,"pl":519,"ct":67129,"b":"Não se aplica"},{"n":"MAR ABSOLUTO FUNDO DE INVESTIMENTO FINANCEIRO EM COTAS DE FUNDOS DE INVESTIMENTO MULTIMERCADO","c":"Multimercado","r":21.61,"cdi":148,"v":30.8,"pl":527,"ct":1180,"b":""},{"n":"MAR ABSOLUTO II FUNDO DE INVESTIMENTO FINANCEIRO EM COTAS DE FUNDOS DE INVESTIMENTO MULTIMERCADO","c":"Multimercado","r":21.55,"cdi":148,"v":30.7,"pl":349,"ct":1619,"b":"Não se aplica"},{"n":"BTG PACTUAL SYNERGY EQUITY HEDGE FUNDO DE INVESTIMENTO FINANCEIRO MULTIMERCADO","c":"Multimercado","r":13.72,"cdi":94,"v":43.3,"pl":978,"ct":3229,"b":"Não se aplica"},{"n":"EMPIRICA LOTUS IPCA FUNDO DE INVESTIMENTO FINANCEIRO EM COTAS DE FUNDOS DE INVESTIMENTO MULTIMERCADO","c":"Multimercado","r":12.61,"cdi":87,"v":38.3,"pl":496,"ct":7385,"b":"Índice de Preços ao Consumidor Amplo (IPCA/IBGE)"},{"n":"EMPIRICA LOTUS FUNDO DE INVESTIMENTO FINANCEIRO EM COTAS DE FUNDOS DE INVESTIMENTO MULTIMERCADO","c":"Multimercado","r":8.86,"cdi":61,"v":25.6,"pl":316,"ct":2065,"b":"DI de um dia"},{"n":"CARTEIRA ITAÚ ASSET INTERNACIONAL DE INVESTIMENTO FIF DA CIC MULTIMERCADO IE RESP LIMITADA","c":"Multimercado","r":5.4,"cdi":37,"v":6.1,"pl":340,"ct":7822,"b":"OUTROS"},{"n":"SANTANDER GLOBAL EQUITIES DÓLAR MASTER MULTIMERCADO INVESTIMENTO NO EXTERIOR - CIC FIF RESP LIMITADA","c":"Multimercado","r":5.14,"cdi":35,"v":13.2,"pl":520,"ct":5516,"b":"OUTROS"},{"n":"REAL INVESTOR FIC DE FUNDO DE INVESTIMENTO FINANCEIRO MULTIMERCADO - RESPONSABILIDADE LIMITADA","c":"Multimercado","r":5.04,"cdi":35,"v":4.4,"pl":1392,"ct":22471,"b":"DI de um dia"},{"n":"ITAÚ INDEX MULTIMERCADO ESTRATÉGIA SP 500 USD FIF DA CLASSE DE INVESTIMENTO EM COTAS RESP LIMITADA","c":"Multimercado","r":3.74,"cdi":26,"v":14.2,"pl":408,"ct":17104,"b":"OUTROS"},{"n":"KAPITALO ZETA MERÍDIA FUNDO DE INVESTIMENTO EM COTAS DE FI FINANCEIRO MULTIMERCADO","c":"Multimercado","r":3.45,"cdi":24,"v":17.1,"pl":2227,"ct":935,"b":"Não se aplica"},{"n":"SAFRA S\u0026P REAIS FUNDO DE INVESTIMENTO FINANCEIRO CLASSE DE INV EM COTAS MULTIMERCADO RESP LIMITADA","c":"Multimercado","r":3.08,"cdi":21,"v":18.4,"pl":442,"ct":4322,"b":"DI de um dia"},{"n":"TREND OURO DÓLAR CLASSE DE INVESTIMENTO MULTIMERCADO - RESPONSABILIDADE LIMITADA","c":"Multimercado","r":3.05,"cdi":21,"v":35.2,"pl":430,"ct":25697,"b":""},{"n":"IBIUNA HEDGE STH FIF - CLASSE DE INVESTIMENTO EM COTAS MULTIMERCADO - RESP LIMITADA","c":"Multimercado","r":2.96,"cdi":20,"v":12.6,"pl":529,"ct":4888,"b":"DI de um dia"},{"n":"BRADESCO IBIUNA HEDGE STH FIF - CIC MULTIMERCADO - RESPONSABILIDADE LIMITADA","c":"Multimercado","r":2.91,"cdi":20,"v":12.3,"pl":328,"ct":2255,"b":"DI de um dia"},{"n":"IBIUNA HEDGE ST ADVISORY FIF - CLASSE DE INVESTIMENTO EM COTAS MULTIMERCADO - RESP LIMITADA","c":"Multimercado","r":2.89,"cdi":20,"v":12.6,"pl":744,"ct":16447,"b":"DI de um dia"},{"n":"CLASSE ÚNICA DO WESTERN ASSET US INDEX 500 FIF MULTIMERCADO RESPONSABILIDADE LIMITADA","c":"Multimercado","r":2.64,"cdi":18,"v":18.7,"pl":1082,"ct":36302,"b":"OUTROS"},{"n":"CAPSTONE MACRO FUNDO DE INVESTIMENTO FINANCEIRO EM COTAS DE FUNDOS DE INVESTIMENTO MULTIMERCADO","c":"Multimercado","r":1.28,"cdi":9,"v":9.4,"pl":928,"ct":622,"b":""},{"n":"CAPSTONE MACRO FEEDER ADVISORY FUNDO DE INVESTIMENTO EM COTAS MULTIMERCADO","c":"Multimercado","r":1.24,"cdi":9,"v":9.3,"pl":305,"ct":670,"b":"Não se aplica"},{"n":"IBIUNA LONG SHORT STLS FIF - CLASSE DE INVESTIMENTO EM COTAS MULTIMERCADO - RESP LIMITADA","c":"Multimercado","r":0.83,"cdi":6,"v":12.3,"pl":606,"ct":2231,"b":"DI de um dia"},{"n":"SPX NIMITZ GRIPEN ADVISORY FUNDO DE INVESTIMENTO FINANCEIRO DA CIC MULTIMERCADO RESP LIMITADA","c":"Multimercado","r":0.76,"cdi":5,"v":8.8,"pl":601,"ct":4107,"b":"DI de um dia"},{"n":"BTGP ACCESS SPX NIMITZ FI FINANCEIRO EM QUOTAS DE FUNDOS DE INVESTIMENTO MULTIMERCADO","c":"Multimercado","r":0.75,"cdi":5,"v":8.8,"pl":365,"ct":2802,"b":""},{"n":"CONEXÃO SPX NIMITZ BP FIF - CLASSE DE COTAS DE INVESTIMENTO MULTIMERCADO - RESP LIMITADA","c":"Multimercado","r":0.74,"cdi":5,"v":8.8,"pl":324,"ct":770,"b":"Não se aplica"},{"n":"IBIUNA HEDGE FIF - CLASSE DE INVESTIMENTO EM COTAS MULTIMERCADO - RESP LIMITADA","c":"Multimercado","r":0.62,"cdi":4,"v":9.5,"pl":403,"ct":9776,"b":"DI de um dia"},{"n":"IBIUNA HEDGE SELEÇÃO MULTIMERCADO FUNDO DE INVESTIMENTO FINANCEIRO DA CIC RESP LIMITADA","c":"Multimercado","r":0.56,"cdi":4,"v":9.5,"pl":440,"ct":6394,"b":"DI de um dia"},{"n":"ITAÚ FUND OF FUNDS ORION MULT CRÉDITO PRIVADO INVESTIMENTO NO EXTERIOR FIF DA CIC RESP LIMITADA","c":"Multimercado","r":0.05,"cdi":0,"v":9.2,"pl":2888,"ct":2369,"b":"DI de um dia"},{"n":"ITAÚ JANEIRO DISTRIBUIDORES FIF DA CLASSE DE INV EM COTAS MULTIMERCADO - RESPONSABILIDADE LIMITADA","c":"Multimercado","r":-0.33,"cdi":-2,"v":9.2,"pl":1276,"ct":11850,"b":"DI de um dia"},{"n":"ITAÚ JANEIRO MULTIMERCADO FIF DA CLASSE DE INVESTIMENTO EM COTAS RESP LIMITADA","c":"Multimercado","r":-0.33,"cdi":-2,"v":9.2,"pl":1168,"ct":11792,"b":"DI de um dia"},{"n":"ITAÚ PRIVATE JANEIRO MULTIMERCADO FIF DA CLASSE DE INVESTIMENTO EM COTAS RESPONSABILIDADE LIMITADA","c":"Multimercado","r":-0.33,"cdi":-2,"v":9.2,"pl":331,"ct":627,"b":"DI de um dia"},{"n":"TÁVOLA EQUITY HEDGE 15 FUNDO DE INVESTIMENTO FINANCEIRO MULTIMERCADO","c":"Multimercado","r":-0.84,"cdi":-6,"v":5.7,"pl":461,"ct":5466,"b":"DI de um dia"},{"n":"KAPITALO KAPPA ADVISORY FUNDO DE INVESTIMENTO FINANCEIRO EM COTAS DE FI MULTIMERCADO","c":"Multimercado","r":-0.9,"cdi":-6,"v":12.7,"pl":499,"ct":11490,"b":"DI de um dia"},{"n":"ITAÚ MULTI HEDGE FUND 30 MULTIMERCADO FIF CIC RESPONSABILIDADE LIMITADA","c":"Multimercado","r":-0.95,"cdi":-7,"v":7.5,"pl":4057,"ct":3349,"b":"DI de um dia"},{"n":"JGP CRÉDITO ECOSSISTEMA 360 ADVISORY FIC DE FIF MULTIMERCADO CRÉD PRIV - RESPONSABILIDADE LIMITADA","c":"Multimercado","r":-1.09,"cdi":-7,"v":10.1,"pl":542,"ct":4438,"b":"Não se aplica"},{"n":"ACCESS KAPITALO K10 FUNDO DE INVESTIMENTO FINANCEIRO EM COTAS DE FUNDOS DE INVESTIMENTO MULTIMERCADO","c":"Multimercado","r":-1.18,"cdi":-8,"v":9.3,"pl":516,"ct":8760,"b":"Não se aplica"},{"n":"ITAÚ SOLUTIONS VEGA FIF DA CLASSE DE INVESTIMENTO EM COTAS MULT RESP LIMITADA","c":"Multimercado","r":-1.19,"cdi":-8,"v":9.4,"pl":348,"ct":516,"b":"DI de um dia"},{"n":"KAPITALO K10 ADVISORY FI FINANCEIRO EM COTAS DE FUNDOS DE INVESTIMENTO MULTIMERCADO","c":"Multimercado","r":-1.19,"cdi":-8,"v":9.4,"pl":1211,"ct":29080,"b":"Não se aplica"},{"n":"KAPITALO K10 ÁGORA FIF - CIC MULTIMERCADO - RESPONSABILIDADE LIMITADA","c":"Multimercado","r":-1.23,"cdi":-8,"v":9.3,"pl":336,"ct":4440,"b":"Não se aplica"},{"n":"BTG PACTUAL SYNERGY LONG BIAS FUNDO DE INVESTIMENTO FINANCEIRO EM AÇÕES","c":"Ações","r":16.76,"cdi":115,"v":45.2,"pl":568,"ct":669,"b":"Não se aplica"},{"n":"MS GLOBAL OPPORTUNITIES DÓLAR ADVISORY CLASSE DE FIC FIA IE - RESP LIMITADA","c":"Ações","r":15.99,"cdi":110,"v":16.8,"pl":601,"ct":8788,"b":""},{"n":"CLASSE ÚNICA DO WESTERN ASSET FUNDO DE INVESTIMENTO FINANCEIRO AÇÕES BDR NÍVEL I - RESP LIMITADA","c":"Ações","r":8.84,"cdi":61,"v":16,"pl":1448,"ct":48519,"b":"OUTROS"},{"n":"TARPON GT 90 FUNDO DE INVESTIMENTO FINANCEIRO EM COTAS DE FUNDOS DE INVESTIMENTO EM AÇÕES","c":"Ações","r":8.3,"cdi":57,"v":25.5,"pl":929,"ct":10461,"b":"Não se aplica"},{"n":"TARPON GT FUNDO DE INVESTIMENTO FINANCEIRO EM COTAS DE FUNDOS DE INVESTIMENTO EM AÇÕES","c":"Ações","r":8.27,"cdi":57,"v":25.5,"pl":438,"ct":6875,"b":"Não se aplica"},{"n":"BB AÇÕES GLOBAIS FIC FIF EM AÇÕES RESPONSABILIDADE LIMITADA","c":"Ações","r":3.4,"cdi":23,"v":17.5,"pl":579,"ct":9626,"b":"OUTROS"},{"n":"IP PARTICIPAÇÕES FIC DE FIF EM AÇÕES - RESPONSABILIDADE LIMITADA","c":"Ações","r":0.99,"cdi":7,"v":9.8,"pl":501,"ct":525,"b":"Índice de Preços ao Consumidor Amplo (IPCA/IBGE)"},{"n":"IP PARTICIPAÇÕES IPG FIC DE FIF EM AÇÕES - RESPONSABILIDADE LIMITADA","c":"Ações","r":0.92,"cdi":6,"v":9.9,"pl":541,"ct":23325,"b":"IBrX"},{"n":"BB AÇÕES TECNOLOGIA FUNDO DE INVESTIMENTO FINANCEIRO RESPONSABILIDADE LIMITADA","c":"Ações","r":-0.11,"cdi":-1,"v":21.1,"pl":382,"ct":14183,"b":"Ibovespa"},{"n":"ARBOR FUNDO DE INVESTIMENTO EM COTAS DE FUNDOS DE INVESTIMENTO DE AÇÕES","c":"Ações","r":-0.41,"cdi":-3,"v":17.1,"pl":308,"ct":2853,"b":"Não se aplica"},{"n":"CAIXA SMALL CAPS ATIVO FUNDO DE INVESTIMENTO FINANCEIRO EM AÇÕES - RESPONSABILIDADE LIMITADA","c":"Ações","r":-1.59,"cdi":-11,"v":21.3,"pl":466,"ct":3281,"b":"OUTROS"},{"n":"REAL INVESTOR FIC DE FUNDOS DE INVESTIMENTO FINANCEIRO EM AÇÕES - RESPONSABILIDADE LIMITADA","c":"Ações","r":-2.46,"cdi":-17,"v":23.5,"pl":2420,"ct":29853,"b":"Ibovespa"},{"n":"ALASKA INSTITUCIONAL LONG ONLY FUNDO DE INVESTIMENTO FINANCEIRO EM AÇÕES","c":"Ações","r":-2.68,"cdi":-18,"v":32.8,"pl":851,"ct":34114,"b":""},{"n":"BB AÇÕES BB FUNDO DE INVESTIMENTO FINANCEIRO RESPONSABILIDADE LIMITADA","c":"Ações","r":-3.06,"cdi":-21,"v":34.5,"pl":352,"ct":29531,"b":"OUTROS"},{"n":"BB AÇÕES SELEÇÃO FATORIAL FUNDO DE INVESTIMENTO EM COTAS DE FIF RESPONSABILIDADE LIMITADA","c":"Ações","r":-3.56,"cdi":-24,"v":22.9,"pl":535,"ct":13319,"b":"OUTROS"},{"n":"4UM SMALL CAPS FIF - CLASSE DE INVESTIMENTO EM AÇÕES - RESP LIMITADA","c":"Ações","r":-4.37,"cdi":-30,"v":20.6,"pl":471,"ct":559,"b":"Ibovespa"},{"n":"BTG PACTUAL ABSOLUTO INSTITUCIONAL FUNDO DE INVESTIMENTO FINANCEIRO EM COTAS DE FI EM AÇÕES","c":"Ações","r":-4.91,"cdi":-34,"v":18,"pl":546,"ct":924,"b":""},{"n":"ALPHAKEY LONG SHORT PLUS FUNDO DE INVESTIMENTO EM COTAS DE FUNDOS DE INVESTIMENTO EM AÇÕES","c":"Ações","r":-5.24,"cdi":-36,"v":10.4,"pl":388,"ct":1143,"b":"Não se aplica"},{"n":"CHARLES RIVER FUNDO DE INVESTIMENTO FINANCEIRO DE AÇÕES","c":"Ações","r":-5.99,"cdi":-41,"v":16.1,"pl":907,"ct":5691,"b":""},{"n":"AZ QUEST SMALL MID CAPS FUNDO DE INVESTIMENTO FINANCEIRO DA CIC EM AÇÕES RESP LIMITADA","c":"Ações","r":-6.01,"cdi":-41,"v":22.2,"pl":865,"ct":1576,"b":"OUTROS"},{"n":"PORTO SFA FUNDO DE INVESTIMENTO FINANCEIRO EM COTAS DE FUNDOS DE INVESTIMENTO EM AÇÕES","c":"Ações","r":-6.08,"cdi":-42,"v":15.3,"pl":373,"ct":683,"b":"Não se aplica"},{"n":"ITAÚ INDEX US TECH FIF CIC EM AÇÕES RESPONSABILIDADE LIMITADA","c":"Ações","r":-6.24,"cdi":-43,"v":27.3,"pl":1185,"ct":18773,"b":"Não se aplica"},{"n":"CAIXA AÇÕES MULTIGESTOR FUNDO DE INVESTIMENTO EM COTAS DE CLASSE DE FIF EM AÇÕES - RESP LIMITADA","c":"Ações","r":-6.26,"cdi":-43,"v":20.1,"pl":311,"ct":641,"b":"Não se aplica"},{"n":"AT ADVISORY II FUNDO DE INVESTIMENTO EM COTAS DE AÇÕES","c":"Ações","r":-6.34,"cdi":-43,"v":12.9,"pl":326,"ct":955,"b":"Não se aplica"},{"n":"SPX FALCON 2 FIF CIC EM AÇÕES RESPONSABILIDADE LIMITADA","c":"Ações","r":-6.55,"cdi":-45,"v":15.7,"pl":730,"ct":3784,"b":"Índice de Preços ao Consumidor Amplo (IPCA/IBGE)"},{"n":"BB AÇÕES BOLSA AMERICANA FIF RESPONSABILISADE LIMITADA","c":"Ações","r":-7.04,"cdi":-48,"v":19.4,"pl":1758,"ct":21345,"b":"OUTROS"},{"n":"TREND S\u0026P 500 BRL CLASSE DE INVESTIMENTO EM AÇÕES - RESPONSABILIDADE LIMITADA","c":"Ações","r":-7.08,"cdi":-49,"v":20.1,"pl":485,"ct":22028,"b":"Não se aplica"},{"n":"ITAÚ INDEX AÇÕES ESTRATÉGIA S\u0026P500 ® FIF DA CLASSE DE INVESTIMENTO EM COTAS RESP LIMITADA","c":"Ações","r":-7.43,"cdi":-51,"v":20.6,"pl":661,"ct":10383,"b":"OUTROS"},{"n":"ITAÚ PRIVATE AÇÕES SP 500 BRL II FIF DA CLASSE DE INVESTIMENTO EM COTAS EM AÇÕES RESP LIMITADA","c":"Ações","r":-7.56,"cdi":-52,"v":20.8,"pl":429,"ct":508,"b":"OUTROS"},{"n":"ITAÚ PRIVATE AQUILA AÇÕES FIF DA CLASSE DE INVESTIMENTO EM COTAS RESP LIMITADA","c":"Ações","r":-8.03,"cdi":-55,"v":15.9,"pl":506,"ct":905,"b":"Ibovespa"},{"n":"CONSTÂNCIA FUNDAMENTO FUNDO DE INVESTIMENTO FINANCEIRO - CLASSE DE INVESTIMENTO EM AÇÕES - RESPONSAB","c":"Ações","r":-8.25,"cdi":-57,"v":24.1,"pl":906,"ct":1268,"b":"Ibovespa"},{"n":"ABSOLUTE PACE LONG BIASED FI EM COTAS DE FUNDOS DE INVESTIMENTO FINANCEIRO EM AÇÕES","c":"Ações","r":-8.68,"cdi":-60,"v":15.4,"pl":1507,"ct":6156,"b":""},{"n":"IBIUNA EQUITIES FIF - CLASSE DE INVESTIMENTO EM COTAS DE AÇÕES - RESP LIMITADA","c":"Ações","r":-8.82,"cdi":-61,"v":24.2,"pl":341,"ct":2692,"b":"IBrX"},{"n":"ABSOLUTE PACE LONG BIASED ADVISORY FI FINANCEIRO EM COTAS DE FUNDOS DE INVESTIMENTO EM AÇÕES","c":"Ações","r":-8.84,"cdi":-61,"v":15.4,"pl":671,"ct":7837,"b":"Não se aplica"},{"n":"GUEPARDO INSTITUCIONAL FUNDO DE INVESTIMENTO FINANCEIRO EM COTAS DE FUNDOS DE INVESTIMENTO EM AÇÕES","c":"Ações","r":-9.17,"cdi":-63,"v":20.7,"pl":2214,"ct":15816,"b":"Não se aplica"},{"n":"TREND TECNOLOGIA AMERICANA CLASSE DE INVESTIMENTO EM AÇÕES - RESPONSABILIDADE LIMITADA","c":"Ações","r":-9.47,"cdi":-65,"v":34.8,"pl":323,"ct":22047,"b":"Não se aplica"},{"n":"ITAÚ PRIVATE MULTI AÇÕES FIF DA CLASSE DE INVESTIMENTO EM COTAS RESPONSABILIDADE LIMITADA","c":"Ações","r":-9.53,"cdi":-65,"v":19,"pl":1174,"ct":1997,"b":"Ibovespa"},{"n":"BB AÇÕES BOLSAS GLOBAIS ATIVO FIC FIF RESPONSABILIDADE LIMITADA","c":"Ações","r":-9.71,"cdi":-67,"v":23.2,"pl":452,"ct":31145,"b":"OUTROS"},{"n":"CAIXA VALE DO RIO DOCE FUNDO DE INVESTIMENTO FINANCEIRO EM AÇÕES - RESPONSABILIDADE LIMITADA","c":"Ações","r":-9.75,"cdi":-67,"v":48.3,"pl":646,"ct":12522,"b":""},{"n":"BB AÇÕES VALE FUNDO DE INVESTIMENTO FINANCEIRO RESPONSABILIDADE LIMITADA","c":"Ações","r":-9.78,"cdi":-67,"v":47.9,"pl":612,"ct":19206,"b":"OUTROS"},{"n":"BB CAMBIAL DOLAR LONGO PRAZO VIP FIC FIF RESPONSABILIDADE LIMITADA","c":"Cambial","r":8.1,"cdi":56,"v":5.4,"pl":454,"ct":783,"b":"Dólar comercial"}];
 const CDI12 = 14.62;
-const MUD   = {"entraram":[],"fund":[],"precos":[],"fatos":[{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1553884\u0026numSequencia=1078590\u0026numVersao=1","t":"CSED3","data":"07/08","assunto":"Aumento de 146 vagas Medicina FAPI","iso":"2026-08-07"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1552788\u0026numSequencia=1077494\u0026numVersao=1","t":"CYRE3","data":"05/08","assunto":"Celebração MoU alienação de ativos","iso":"2026-08-05"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1546153\u0026numSequencia=1070859\u0026numVersao=1","t":"ROMI3","data":"20/07","assunto":"Celebração ou Extinção de Contrato","iso":"2026-07-20"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1551082\u0026numSequencia=1075788\u0026numVersao=1","t":"VLID3","data":"03/08","assunto":"Aquisição de empresa","iso":"2026-08-03"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1552108\u0026numSequencia=1076814\u0026numVersao=1","t":"VULC3","data":"04/08","assunto":"Plano de Recompra de Ações","iso":"2026-08-04"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1547458\u0026numSequencia=1072164\u0026numVersao=1","t":"TTEN3","data":"23/07","assunto":"Alteração do Formador de Mercado","iso":"2026-07-23"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1549173\u0026numSequencia=1073879\u0026numVersao=1","t":"TTEN3","data":"29/07","assunto":"Ofício n. 152/2026/CVM/SEP/GEA-2","iso":"2026-07-29"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1550099\u0026numSequencia=1074805\u0026numVersao=1","t":"RANI3","data":"31/07","assunto":"Aprovadas operações de captação e de liquidação antecipada de dívidas, no âmbito da sua estratégia de Liability Management (gestão ativa do endividamento).","iso":"2026-07-31"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1549939\u0026numSequencia=1074645\u0026numVersao=1","t":"EALT3","data":"30/07","assunto":"Aumento de capital - Homologação parcial subscrição de ações - Conclusão da operação","iso":"2026-07-30"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1546397\u0026numSequencia=1071103\u0026numVersao=1","t":"CLSC3","data":"20/07","assunto":"Closing Dona Francisca Energética S.A.","iso":"2026-07-20"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1553780\u0026numSequencia=1078486\u0026numVersao=1","t":"PETR4","data":"06/08","assunto":"Petrobras informa sobre remuneração aos acionistas","iso":"2026-08-06"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1547954\u0026numSequencia=1072660\u0026numVersao=1","t":"BRAV3","data":"24/07","assunto":"Manifestação do Conselho de Administração sobre a OPA","iso":"2026-07-24"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1552902\u0026numSequencia=1077608\u0026numVersao=1","t":"BRAV3","data":"05/08","assunto":"Resultado do Leilão Referente à OPA Lançada pela Ecopetrol","iso":"2026-08-05"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1546429\u0026numSequencia=1071135\u0026numVersao=1","t":"BRAV3","data":"20/07","assunto":"Reapresentação do Edital da Oferta Pública de Aquisição de Ações","iso":"2026-07-20"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1553775\u0026numSequencia=1078481\u0026numVersao=1","t":"RECV3","data":"06/08","assunto":"Distribuição de Juros sobre Capital Próprio","iso":"2026-08-06"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1547135\u0026numSequencia=1071841\u0026numVersao=1","t":"MTRE3","data":"22/07","assunto":"PROGRAMA DE RECOMPRA DE AÇÕES","iso":"2026-07-22"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1548963\u0026numSequencia=1073669\u0026numVersao=1","t":"PETR4","data":"28/07","assunto":"Relatório de Produção e Vendas 2T26","iso":"2026-07-28"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1550775\u0026numSequencia=1075481\u0026numVersao=2","t":"PETR4","data":"31/07","assunto":"Relatório de Produção e Vendas 2T26","iso":"2026-07-31"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1554441\u0026numSequencia=1079147\u0026numVersao=2","t":"LAVV3","data":"07/08","assunto":"Data de pagamento de dividendos","iso":"2026-08-07"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1552873\u0026numSequencia=1077579\u0026numVersao=1","t":"LAVV3","data":"05/08","assunto":"Data de pagamento de dividendos","iso":"2026-08-05"}],"desde":"2026-08-14T23:42:09","sairam":[]};
+const MUD   = {"entraram":[],"fund":[],"precos":[],"fatos":[{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1553884\u0026numSequencia=1078590\u0026numVersao=1","t":"CSED3","data":"07/08","assunto":"Aumento de 146 vagas Medicina FAPI","iso":"2026-08-07"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1552788\u0026numSequencia=1077494\u0026numVersao=1","t":"CYRE3","data":"05/08","assunto":"Celebração MoU alienação de ativos","iso":"2026-08-05"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1546153\u0026numSequencia=1070859\u0026numVersao=1","t":"ROMI3","data":"20/07","assunto":"Celebração ou Extinção de Contrato","iso":"2026-07-20"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1551082\u0026numSequencia=1075788\u0026numVersao=1","t":"VLID3","data":"03/08","assunto":"Aquisição de empresa","iso":"2026-08-03"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1552108\u0026numSequencia=1076814\u0026numVersao=1","t":"VULC3","data":"04/08","assunto":"Plano de Recompra de Ações","iso":"2026-08-04"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1547458\u0026numSequencia=1072164\u0026numVersao=1","t":"TTEN3","data":"23/07","assunto":"Alteração do Formador de Mercado","iso":"2026-07-23"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1549173\u0026numSequencia=1073879\u0026numVersao=1","t":"TTEN3","data":"29/07","assunto":"Ofício n. 152/2026/CVM/SEP/GEA-2","iso":"2026-07-29"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1550099\u0026numSequencia=1074805\u0026numVersao=1","t":"RANI3","data":"31/07","assunto":"Aprovadas operações de captação e de liquidação antecipada de dívidas, no âmbito da sua estratégia de Liability Management (gestão ativa do endividamento).","iso":"2026-07-31"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1549939\u0026numSequencia=1074645\u0026numVersao=1","t":"EALT3","data":"30/07","assunto":"Aumento de capital - Homologação parcial subscrição de ações - Conclusão da operação","iso":"2026-07-30"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1546397\u0026numSequencia=1071103\u0026numVersao=1","t":"CLSC3","data":"20/07","assunto":"Closing Dona Francisca Energética S.A.","iso":"2026-07-20"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1553780\u0026numSequencia=1078486\u0026numVersao=1","t":"PETR4","data":"06/08","assunto":"Petrobras informa sobre remuneração aos acionistas","iso":"2026-08-06"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1547954\u0026numSequencia=1072660\u0026numVersao=1","t":"BRAV3","data":"24/07","assunto":"Manifestação do Conselho de Administração sobre a OPA","iso":"2026-07-24"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1552902\u0026numSequencia=1077608\u0026numVersao=1","t":"BRAV3","data":"05/08","assunto":"Resultado do Leilão Referente à OPA Lançada pela Ecopetrol","iso":"2026-08-05"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1546429\u0026numSequencia=1071135\u0026numVersao=1","t":"BRAV3","data":"20/07","assunto":"Reapresentação do Edital da Oferta Pública de Aquisição de Ações","iso":"2026-07-20"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1553775\u0026numSequencia=1078481\u0026numVersao=1","t":"RECV3","data":"06/08","assunto":"Distribuição de Juros sobre Capital Próprio","iso":"2026-08-06"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1547135\u0026numSequencia=1071841\u0026numVersao=1","t":"MTRE3","data":"22/07","assunto":"PROGRAMA DE RECOMPRA DE AÇÕES","iso":"2026-07-22"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1548963\u0026numSequencia=1073669\u0026numVersao=1","t":"PETR4","data":"28/07","assunto":"Relatório de Produção e Vendas 2T26","iso":"2026-07-28"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1550775\u0026numSequencia=1075481\u0026numVersao=2","t":"PETR4","data":"31/07","assunto":"Relatório de Produção e Vendas 2T26","iso":"2026-07-31"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1554441\u0026numSequencia=1079147\u0026numVersao=2","t":"LAVV3","data":"07/08","assunto":"Data de pagamento de dividendos","iso":"2026-08-07"},{"link":"https://www.rad.cvm.gov.br/ENET/frmDownloadDocumento.aspx?Tela=ext\u0026descTipo=IPE\u0026CodigoInstituicao=1\u0026numProtocolo=1552873\u0026numSequencia=1077579\u0026numVersao=1","t":"LAVV3","data":"05/08","assunto":"Data de pagamento de dividendos","iso":"2026-08-05"}],"desde":"2026-08-15T13:12:49","sairam":[]};
 let sortA={k:'ey',d:-1}, sortF={k:'pvp',d:1}, sortU={k:'ey',d:-1}, sortD={k:'r',d:-1}, tab='a';
 
 const med=a=>{if(!a.length)return 0;const s=[...a].sort((x,y)=>x-y);return s[Math.floor(s.length/2)]};
@@ -634,7 +661,7 @@ function setTab(t){
     if(t==='r' && !feito.r){ feito.r=true; guard('Renda fixa',renderRF); }
     if(t==='c' && !feito.c){ feito.c=true; guard('carteira', ()=>{
       idxCarteira();
-      mudouTipo();
+      montaForm();
       // Recupera as posições da última visita — ficam só neste navegador.
       try{ const s=localStorage.getItem('carteira2');
         if(s){ POS=JSON.parse(s)||[] } }catch(e){ POS=[] }
@@ -1245,39 +1272,79 @@ function idxCarteira(){ ACOES.forEach(r=>IDXA[r.t]=r); FIIS.forEach(r=>IDXF[r.t]
 
 let POS=[];   // [{tipo:'acao'|'fii'|'outro', id, qtd?, valor?}]
 
-function mudouTipo(){
-  const t=document.getElementById('ci-tipo').value, ext=t==='outro';
-  document.getElementById('w-ativo').style.display=ext?'none':'';
-  document.getElementById('w-nome').style.display =ext?'':'none';
-  document.getElementById('w-qtd').style.display  =ext?'none':'';
-  document.getElementById('w-val').style.display  =ext?'':'none';
-  const sel=document.getElementById('ci-ativo');
-  const fonte = t==='acao' ? ACOES : FIIS;
-  sel.innerHTML=[...fonte].sort((a,b)=>a.t.localeCompare(b.t))
-    .map(r=>`<option value="${r.t}">${r.t} — R$ ${f2(r.p)}</option>`).join('');
+let tipoAtual='acao';
+// Cada classe define de onde vem a lista, se pede quantidade ou valor, e qual
+// dica aparece embaixo do campo.
+const CLASSES={
+  acao:   {rot:'Ação',      campo:'qtd', lista:()=>ACOES, cod:r=>r.t, desc:r=>`R$ ${f2(r.p)}`,
+           dica:'Quantidade de ações. O valor é calculado pela cotação da base.'},
+  fii:    {rot:'FII',       campo:'qtd', lista:()=>FIIS,  cod:r=>r.t, desc:r=>`R$ ${f2(r.p)}`,
+           dica:'Quantidade de cotas.'},
+  eua:    {rot:'Ação EUA',  campo:'qtd', lista:()=>EUA,   cod:r=>r.t, desc:r=>`US$ ${f2(r.p)}`,
+           dica:()=>{const d=dolar(); return d?`Quantidade de ações. Convertido a R$ ${f2(d)} por dólar.`:'Quantidade de ações (dólar indisponível).'}},
+  fundo:  {rot:'Fundo',     campo:'val', lista:()=>FUNDOS, cod:r=>r.n, desc:r=>`${r.c} · ${f1(r.r)}% em 12m`,
+           dica:'Fundo não tem cotação pública por cota — informe quanto você tem aplicado.'},
+  tesouro:{rot:'Tesouro',   campo:'val', lista:()=>((RF&&RF.tesouro)||[]).map(t=>({t:`${t.n} ${t.v}`,tx:t.tx})),
+           cod:r=>r.t, desc:r=>`${f2(r.tx)}% a.a.`,
+           dica:'Informe o valor atual da posição, como aparece no extrato.'},
+  outro:  {rot:'Outro',     campo:'val', lista:()=>[], cod:r=>r, desc:()=>'',
+           dica:'CDB, LCI, poupança, cripto — qualquer coisa fora das listas. Digite o nome.'}
+};
+function dolar(){ return (RF&&RF.macro&&RF.macro.dolar)?RF.macro.dolar.v:null }
+
+function escolheTipo(btn){ guard('classe', ()=>{
+  document.querySelectorAll('#ci-classes .cl').forEach(b=>b.classList.toggle('on',b===btn));
+  tipoAtual=btn.dataset.tipo;
+  montaForm();
+}) }
+function montaForm(){
+  const C=CLASSES[tipoAtual];
+  const dl=document.getElementById('lista-ativos');
+  const inp=document.getElementById('ci-ativo');
+  const itens=C.lista();
+  // datalist filtra enquanto digita — funciona com mil FIIs, o <select> não.
+  dl.innerHTML=[...itens].sort((a,b)=>String(C.cod(a)).localeCompare(String(C.cod(b))))
+    .map(r=>`<option value="${String(C.cod(r)).replace(/"/g,'')}">${C.desc(r)}</option>`).join('');
+  inp.placeholder = tipoAtual==='outro' ? 'ex.: CDB Banco X 110% do CDI'
+                  : itens.length ? `digite para buscar entre ${itens.length}…` : 'digite o nome';
+  document.getElementById('lb-ativo').textContent = tipoAtual==='outro' ? 'Nome' : 'Ativo';
+  const q=C.campo==='qtd';
+  document.getElementById('lb-qtd').textContent = q ? 'Quantidade' : 'Valor R$';
+  const ci=document.getElementById('ci-qtd');
+  ci.placeholder = q ? '100' : '25000';
+  ci.step = q ? '1' : '100';
+  const dica = typeof C.dica==='function' ? C.dica() : C.dica;
+  document.getElementById('ci-dica').textContent = dica;
 }
 function aviso(msg){
   document.getElementById('cart-erro').innerHTML = msg
     ? `<div style="color:var(--warn);font-size:13px">${msg}</div>` : '';
 }
 function addPos(){ guard('adicionar', ()=>{
-  const t=document.getElementById('ci-tipo').value;
-  if(t==='outro'){
-    const n=document.getElementById('ci-nome').value.trim();
-    const v=+document.getElementById('ci-val').value;
-    if(!n)      return aviso('Informe um nome para a posição.');
-    if(!(v>0))  return aviso('Informe um valor maior que zero.');
-    POS.push({tipo:'outro',id:n,valor:v});
-    document.getElementById('ci-nome').value=''; document.getElementById('ci-val').value='';
-  }else{
-    const tk=document.getElementById('ci-ativo').value;
-    const q=+document.getElementById('ci-qtd').value;
-    if(!tk)    return aviso('Escolha um ativo.');
-    if(!(q>0)) return aviso('Informe uma quantidade maior que zero.');
-    const ja=POS.find(p=>p.id===tk);
-    if(ja) ja.qtd+=q; else POS.push({tipo:t,id:tk,qtd:q});
-    document.getElementById('ci-qtd').value='';
+  const C=CLASSES[tipoAtual];
+  const nome=document.getElementById('ci-ativo').value.trim();
+  const num=+document.getElementById('ci-qtd').value;
+  if(!nome) return aviso('Informe o ativo.');
+  if(!(num>0)) return aviso(C.campo==='qtd' ? 'Informe uma quantidade maior que zero.' : 'Informe um valor maior que zero.');
+  // Ativo de lista tem que existir nela — digitar errado viraria posição
+  // fantasma com valor zero, que some do diagnóstico sem avisar.
+  if(tipoAtual!=='outro'){
+    const itens=C.lista();
+    const achou=itens.some(r=>String(C.cod(r)).toUpperCase()===nome.toUpperCase());
+    if(!achou) return aviso(`"${nome}" não está na lista de ${C.rot}. Use "Outro" para incluir mesmo assim.`);
   }
+  const chave=nome.toUpperCase();
+  const ja=POS.find(p=>p.tipo===tipoAtual && String(p.id).toUpperCase()===chave);
+  if(ja){
+    if(C.campo==='qtd') ja.qtd=(ja.qtd||0)+num; else ja.valor=(ja.valor||0)+num;
+  }else{
+    const p={tipo:tipoAtual,id:nome};
+    if(C.campo==='qtd') p.qtd=num; else p.valor=num;
+    POS.push(p);
+  }
+  document.getElementById('ci-ativo').value='';
+  document.getElementById('ci-qtd').value='';
+  document.getElementById('ci-ativo').focus();
   aviso(''); salvar(); analisarCarteira();
 }) }
 function removePos(i){ POS.splice(i,1); salvar(); analisarCarteira(); }
@@ -1363,10 +1430,15 @@ function lerCsvB3(txt){
 }
 
 function exemploCarteira(){
+  // Cobre as seis classes, para o diagnóstico mostrar o que sabe fazer.
+  const t0=((RF&&RF.tesouro)||[])[0];
+  const f0=(FUNDOS||[])[0];
   POS=[{tipo:'acao',id:'PETR4',qtd:200},{tipo:'acao',id:'WEGE3',qtd:150},
        {tipo:'fii',id:'MXRF11',qtd:2000},{tipo:'fii',id:'HGLG11',qtd:40},
-       {tipo:'outro',id:'Tesouro IPCA+ 2035',valor:25000},
-       {tipo:'outro',id:'CDB 110% do CDI',valor:30000}];
+       {tipo:'eua',id:'AAPL',qtd:20}];
+  if(t0) POS.push({tipo:'tesouro',id:`${t0.n} ${t0.v}`,valor:25000});
+  if(f0) POS.push({tipo:'fundo',id:f0.n,valor:18000});
+  POS.push({tipo:'outro',id:'CDB 110% do CDI',valor:30000});
   salvar(); analisarCarteira();
 }
 function limparCarteira(){
@@ -1376,13 +1448,31 @@ function limparCarteira(){
 }
 // Converte POS (o que o usuário informou) em itens com valor e indicadores.
 function materializa(){
+  const usd=dolar();
   return POS.map(p=>{
-    if(p.tipo==='outro') return {nome:p.id,valor:p.valor,classe:'Renda fixa / outros',fonte:'valor'};
-    const d = p.tipo==='acao' ? IDXA[p.id] : IDXF[p.id];
-    if(!d) return {nome:p.id,valor:0,classe:'—',fonte:'erro'};
-    return {nome:p.id,ticker:p.id,qtd:p.qtd,preco:d.p,valor:p.qtd*d.p,
-            classe:p.tipo==='acao'?'Ação':'FII',dados:d,
-            tipoFii:p.tipo==='fii'?d.tp:null,setor:p.tipo==='acao'?d.s:null,fonte:'base'};
+    const up=String(p.id).toUpperCase();
+    if(p.tipo==='acao'||p.tipo==='fii'){
+      const d = p.tipo==='acao' ? IDXA[p.id] : IDXF[p.id];
+      if(!d) return {nome:p.id,valor:0,classe:'—',fonte:'erro'};
+      return {nome:p.id,ticker:p.id,qtd:p.qtd,preco:d.p,valor:p.qtd*d.p,
+              classe:p.tipo==='acao'?'Ação BR':'FII',dados:d,
+              tipoFii:p.tipo==='fii'?d.tp:null,setor:p.tipo==='acao'?d.s:null,fonte:'base'};
+    }
+    if(p.tipo==='eua'){
+      const d=(EUA||[]).find(r=>r.t.toUpperCase()===up);
+      if(!d||!usd) return {nome:p.id,valor:0,classe:'Ação EUA',fonte:'erro'};
+      // Convertido pelo PTAX: a posição é em dólar, a carteira é em real.
+      return {nome:p.id,ticker:p.id,qtd:p.qtd,preco:d.p,valor:p.qtd*d.p*usd,
+              classe:'Ação EUA',dados:d,setor:d.s,cambial:true,fonte:'base'};
+    }
+    if(p.tipo==='fundo'){
+      const d=(FUNDOS||[]).find(r=>r.n.toUpperCase()===up);
+      return {nome:p.id,valor:p.valor,classe:'Fundo',dadosFundo:d,fonte:'valor'};
+    }
+    if(p.tipo==='tesouro'){
+      return {nome:p.id,valor:p.valor,classe:'Tesouro',fonte:'valor',rendaFixa:true};
+    }
+    return {nome:p.id,valor:p.valor,classe:'Outros',fonte:'valor'};
   });
 }
 function renderLista(itens,tot){
@@ -1436,9 +1526,22 @@ function analisarCarteira(){ guard('carteira', ()=>{
   const poAlto=acoes.filter(x=>x.dados && x.dados.po>100);
   poAlto.forEach(x=>obs.push({n:'media',t:`<b>${x.nome}</b> distribuiu <b>${x.dados.po}%</b> do lucro. Acima de 100% significa pagar além do que ganhou no exercício.`}));
 
-  const rendaFixa=itens.filter(x=>['Tesouro','Renda fixa bancária','Crédito privado'].includes(x.classe));
+  const rendaFixa=itens.filter(x=>x.rendaFixa || x.classe==='Tesouro' || x.classe==='Outros');
   const pctRF=rendaFixa.reduce((s,x)=>s+x.pct,0);
   const pctRV=100-pctRF;
+
+  // Exposição cambial: a posição em dólar tem duas apostas embutidas.
+  const emDolar=itens.filter(x=>x.cambial);
+  const pctUSD=emDolar.reduce((s,x)=>s+x.pct,0);
+  if(pctUSD>0) obs.push({n:pctUSD>=30?'alta':'media',
+    t:`<b>${f1(pctUSD)}%</b> em ações americanas, cotadas em dólar. São duas apostas ao mesmo tempo: a empresa e a moeda. Se o dólar cair 10%, essa fatia perde 10% em reais mesmo com as ações de pé.`});
+
+  // Fundo cobra taxa e já vem líquido dela — mas o custo existe e não aparece.
+  const fundos=itens.filter(x=>x.classe==='Fundo');
+  if(fundos.length){
+    const pf=fundos.reduce((s,x)=>s+x.pct,0);
+    obs.push({n:'info',t:`<b>${f1(pf)}%</b> em fundos. O retorno deles já é líquido de taxa de administração, mas não de imposto — fundo comum tem come-cotas semestral.`});
+  }
   if(pctRF===0 && itens.length>2) obs.push({n:'info',t:`Nenhuma posição em renda fixa identificada. Toda a carteira oscila com o mercado.`});
   if(pctRF>0) obs.push({n:'info',t:`Divisão: <b>${f1(pctRV)}%</b> em renda variável, <b>${f1(pctRF)}%</b> em renda fixa. Não existe proporção "certa" — ela depende do seu prazo e do quanto de oscilação você suporta sem vender no pior momento.`});
 
@@ -1483,8 +1586,10 @@ function analisarCarteira(){ guard('carteira', ()=>{
       <div class="cs">Os mesmos indicadores das outras abas, só para o que você tem.</div>
       <table><tbody>${itens.map(x=>{
         let ind='<span style="color:var(--dim)">sem indicador na base</span>';
-        if(x.classe==='Ação'&&x.dados) ind=`L/P ${f1(x.dados.ey)}% · ROE ${f1(x.dados.roe)}% · dív ${f2(x.dados.de)}×`;
-        if(x.classe==='FII'&&x.dados) ind=`P/VP ${x.dados.pvp.toFixed(2)} · DY ${f1(x.dados.dy)}%`+(x.dados.vac!=null?` · vac ${f1(x.dados.vac)}%`:'');
+        if(x.classe==='Ação BR'&&x.dados) ind=`L/P ${f1(x.dados.ey)}% · ROE ${f1(x.dados.roe)}% · dív ${f2(x.dados.de)}×`;
+        if(x.classe==='FII'&&x.dados) ind=`P/VP ${x.dados.pvp.toFixed(2)} · ret total ${x.dados.rt==null?'—':f1(x.dados.rt)+'%'}`+(x.dados.ero>0?` · ${f1(x.dados.ero)}% do capital`:'');
+        if(x.classe==='Ação EUA'&&x.dados) ind=`L/P ${f1(x.dados.ey)}% · ROE ${x.dados.roe==null?'—':f1(x.dados.roe)+'%'} · beta ${x.dados.be==null?'—':f2(x.dados.be)}`;
+        if(x.classe==='Fundo'&&x.dadosFundo) ind=`${f1(x.dadosFundo.r)}% em 12m · vol ${x.dadosFundo.v==null?'—':f1(x.dadosFundo.v)+'%'}`;
         return `<tr><td class="tk">${x.nome}</td>
           <td style="text-align:right;font-size:12px;color:var(--dim)">${ind}</td></tr>`}).join('')}
       </tbody></table>
