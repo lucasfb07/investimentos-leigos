@@ -341,7 +341,7 @@ footer{margin-top:26px;font-size:12.5px;color:var(--dim);border-top:1px solid va
     <h2>🏢 O que é um FII</h2>
     <p>Um Fundo de Investimento Imobiliário junta o dinheiro de muita gente para investir em imóveis — e divide o resultado entre os cotistas, <span class="k">quase sempre todo mês</span>. Você compra cotas na bolsa como se fosse ação, mas em vez de ser sócio de uma empresa, você é dono de uma fatia de shoppings, galpões, lajes ou de dívidas imobiliárias. Para pessoa física, esse rendimento mensal costuma ser <b>isento de imposto de renda</b>.</p>
     <p>Existem dois tipos, e eles se comportam de forma diferente: o de <span class="k">tijolo</span> tem imóveis de verdade e vive de aluguel — o risco é inquilino sair (<abbr title="Percentual do imóvel desocupado. Vacância física mede área vazia; vacância financeira mede a receita que deixou de entrar.">vacância</abbr>). O de <span class="k">papel</span> empresta dinheiro ao setor imobiliário via <abbr title="Certificado de Recebíveis Imobiliários: título de dívida lastreado em contratos imobiliários. Paga juros, geralmente atrelados ao CDI ou à inflação.">CRI</abbr> e vive de juros — o risco é calote e queda da taxa básica.</p>
-    <p><b>A armadilha mais comum:</b> escolher pelo <abbr title="Dividend Yield: rendimento distribuído nos últimos 12 meses dividido pelo preço da cota. É retrovisor, não promessa.">rendimento</abbr> mais alto. Rendimento alto costuma ser preço baixo — e o preço pode estar baixo por um bom motivo, como vacância ou inadimplência. Por isso a tabela mostra as duas coisas lado a lado.</p>
+    <p><b>A armadilha mais comum:</b> escolher pelo rendimento mais alto. Por isso a tabela separa <span class="k">o que o fundo distribuiu</span> do <span class="k">que aconteceu com o patrimônio</span>. Um fundo pode pagar 13% ao ano e entregar menos de 5% de retorno real, porque parte do que ele distribui sai do próprio capital — o dinheiro pinga na conta e o patrimônio que sustenta a renda encolhe junto. A coluna <b>Ret total</b> soma os dois e é por ela que se compara.</p>
   </div>
   <div class="card warn">
     <b>Vacância: de onde vem e onde ela falha.</b>
@@ -361,11 +361,12 @@ footer{margin-top:26px;font-size:12.5px;color:var(--dim);border-top:1px solid va
     <div class="ct">Top 5 pelos critérios definidos</div>
     <div class="cs">Mesma lógica: eixos normalizados entre os fundos aprovados, somados com os pesos abaixo.</div>
     <div class="wts" style="margin-bottom:14px">
-      <div class="f"><label>Rendimento</label><input type="number" id="v1" value="30" step="5" oninput="renderF()"></div>
-      <div class="f"><label>Desconto (P/VP)</label><input type="number" id="v2" value="25" step="5" oninput="renderF()"></div>
-      <div class="f"><label>Diversificação</label><input type="number" id="v3" value="20" step="5" oninput="renderF()"></div>
-      <div class="f"><label>Taxa baixa</label><input type="number" id="v4" value="15" step="5" oninput="renderF()"></div>
-      <div class="f"><label>Liquidez</label><input type="number" id="v5" value="10" step="5" oninput="renderF()"></div>
+      <div class="f"><label><abbr title="Distribuição mais variação do patrimônio por cota. É o retorno econômico de verdade — DY alto com patrimônio encolhendo não é retorno cheio.">Retorno total</abbr></label><input type="number" id="v1" value="30" step="5" oninput="renderF()"></div>
+      <div class="f"><label><abbr title="Penaliza fundo que distribui além do que gera. Quando o patrimônio por cota cai, parte do rendimento é devolução do seu próprio capital.">Sustentabilidade</abbr></label><input type="number" id="v2" value="25" step="5" oninput="renderF()"></div>
+      <div class="f"><label>Desconto (P/VP)</label><input type="number" id="v3" value="15" step="5" oninput="renderF()"></div>
+      <div class="f"><label><abbr title="Quanto a distribuição mensal oscila. Baixa oscilação = renda previsível.">Previsibilidade</abbr></label><input type="number" id="v4" value="15" step="5" oninput="renderF()"></div>
+      <div class="f"><label>Diversificação</label><input type="number" id="v5" value="10" step="5" oninput="renderF()"></div>
+      <div class="f"><label>Taxa baixa</label><input type="number" id="v6" value="5" step="5" oninput="renderF()"></div>
     </div>
     <div class="top5" id="t5f"></div>
     <details><summary>O que falta neste score — leia antes de usar</summary>
@@ -401,7 +402,10 @@ footer{margin-top:26px;font-size:12.5px;color:var(--dim);border-top:1px solid va
       <th onclick="srt('f','p')">Preço</th>
       <th onclick="srt('f','vp')"><abbr title="Valor patrimonial por cota: o patrimônio do fundo dividido pelo número de cotas. É quanto de patrimônio cada cota representa segundo a contabilidade.">VP/cota</abbr></th>
       <th onclick="srt('f','pvp')"><abbr title="Preço dividido pelo valor patrimonial. Abaixo de 1 você paga menos que o valor de livro; acima de 1, paga ágio. Desconto pode ser oportunidade — ou aviso de problema.">P/VP</abbr></th>
-      <th onclick="srt('f','dy')"><abbr title="Dividend Yield anualizado: rendimento do mês multiplicado por 12, sobre o preço. Supõe repetição — um mês com receita extraordinária infla o número.">DY ano %</abbr></th>
+      <th onclick="srt('f','dyr')"><abbr title="Distribuição efetiva do período, composta e anualizada a partir da série mensal da CVM. Substitui o antigo 'mês × 12', que um único mês atípico distorcia.">DY real %</abbr></th>
+      <th onclick="srt('f','pat')"><abbr title="Variação do valor patrimonial por cota no período. Negativo significa que o patrimônio que sustenta a renda está encolhendo.">Patrim %</abbr></th>
+      <th onclick="srt('f','rt')"><abbr title="Distribuição mais variação patrimonial: o retorno econômico real. É por aqui que se compara fundos, não pelo DY isolado.">Ret total %</abbr></th>
+      <th onclick="srt('f','ero')"><abbr title="Fatia da distribuição que saiu do patrimônio em vez do resultado. Acima de zero, parte do rendimento é devolução do seu próprio capital.">Do capital %</abbr></th>
       <th onclick="srt('f','tx')"><abbr title="Taxa de administração ao ano, como percentual do patrimônio. Sai do seu bolso todo mês, independentemente de o fundo ir bem ou mal.">Taxa %</abbr></th>
       <th onclick="srt('f','vac')"><abbr title="Percentual de área desocupada, ponderado por metro quadrado (Informe Trimestral da CVM). Traço significa SEM DADO, não zero: FII de papel não tem imóvel.">Vacância %</abbr></th>
       <th onclick="srt('f','ci')"><abbr title="Fatia da receita do fundo que vem do maior imóvel. Acima de 60% significa que a saída de um inquilino compromete boa parte da distribuição.">Maior imóvel</abbr></th>
@@ -885,23 +889,31 @@ function top5A(d){
 }
 function top5F(d){
   if(d.length<2) return d.map(r=>({...r,sc:0}));
-  const w=['v1','v2','v3','v4','v5'].map(i=>+document.getElementById(i).value||0);
+  const w=['v1','v2','v3','v4','v5','v6'].map(i=>+document.getElementById(i).value||0);
   const tw=w.reduce((a,b)=>a+b,0)||1;
-  const nDy=nrm(d,r=>r.dy), nPv=nrm(d,r=>r.pvp,true), nTx=nrm(d,r=>r.tx,true),
-        nCt=nrm(d,r=>Math.log10(Math.max(r.ct,1)));
+  // Retorno TOTAL, não DY. Um fundo pode distribuir 13% e entregar 4,7% de
+  // retorno real se o patrimônio por cota encolher no caminho.
+  const ret=r=> r.rt!=null ? r.rt : (r.dy!=null ? r.dy : 0);
+  const nRt=nrm(d,ret);
+  // Sustentabilidade: quanto MENOS da distribuição veio do capital, melhor.
+  const nSu=nrm(d,r=> r.ero!=null ? r.ero : 0, true);
+  // Previsibilidade: oscilação da distribuição mensal, invertida.
+  const nCv=nrm(d,r=> r.cv!=null ? Math.min(r.cv,100) : 50, true);
+  const nPv=nrm(d,r=>r.pvp,true), nTx=nrm(d,r=>r.tx,true);
   // Diversificação usa a concentração REAL por imóvel quando existe; cai para
   // a concentração por classe de ativo só quando o fundo não tem imóvel.
   const nCc=nrm(d,r=> r.ci!=null ? r.ci/100 : r.cc, true);
-  // Vacância entra como penalidade, não como eixo: sem dado não pode virar
-  // nota boa nem ruim — vira neutro, e o card avisa "sem dado".
+  // Vacância segue como penalidade multiplicativa: sem dado não pode virar
+  // nota boa nem ruim — fica neutro, e o card avisa "sem dado".
   const pen=r=> r.vac==null ? 1 : Math.max(0, 1 - Math.min(r.vac,40)/40*0.5);
-  return d.map(r=>({...r, sc:100*pen(r)*(w[0]*nDy(r)+w[1]*nPv(r)+w[2]*nCc(r)+w[3]*nTx(r)+w[4]*nCt(r))/tw,
+  return d.map(r=>({...r, sc:100*pen(r)*(w[0]*nRt(r)+w[1]*nSu(r)+w[2]*nPv(r)+w[3]*nCv(r)+w[4]*nCc(r)+w[5]*nTx(r))/tw,
     det:detalhe([
-      {rot:'Rendimento',    n:nDy(r), peso:w[0], val:f1(r.dy)+'%'},
-      {rot:'Desconto (P/VP)',n:nPv(r),peso:w[1], val:r.pvp.toFixed(2)},
-      {rot:'Diversificação',n:nCc(r), peso:w[2], val:r.ci!=null?r.ci.toFixed(0)+'% no maior':'por classe'},
-      {rot:'Taxa baixa',    n:nTx(r), peso:w[3], val:f1(r.tx)+'%'},
-      {rot:'Liquidez',      n:nCt(r), peso:w[4], val:(r.ct/1000).toFixed(0)+'k cotistas'}])
+      {rot:'Retorno total',   n:nRt(r), peso:w[0], val:r.rt!=null?f1(r.rt)+'%':'só DY'},
+      {rot:'Sustentabilidade',n:nSu(r), peso:w[1], val:r.ero>0?f1(r.ero)+'% do capital':'íntegra'},
+      {rot:'Desconto (P/VP)', n:nPv(r), peso:w[2], val:r.pvp.toFixed(2)},
+      {rot:'Previsibilidade', n:nCv(r), peso:w[3], val:r.cv!=null?'oscila '+f1(r.cv)+'%':'sem série'},
+      {rot:'Diversificação',  n:nCc(r), peso:w[4], val:r.ci!=null?r.ci.toFixed(0)+'% no maior':'por classe'},
+      {rot:'Taxa baixa',      n:nTx(r), peso:w[5], val:f1(r.tx)+'%'}])
       .concat(r.vac!=null&&r.vac>0?[{rot:'Penalidade vacância',n:pen(r),peso:0,nota:Math.round(pen(r)*100),pts:0,val:f1(r.vac)+'%'}]:[])}))
           .sort((a,b)=>b.sc-a.sc);
 }
@@ -1061,10 +1073,11 @@ function filtF(){
 }
 function renderF(){
   const d=filtF();
-  cards('t5f', top5F(d), r=>`<dt>DY ano</dt><dd>${f1(r.dy)}%</dd><dt>P/VP</dt><dd>${r.pvp.toFixed(3)}</dd>
-    <dt>Taxa</dt><dd>${f1(r.tx)}%</dd>
-    <dt>Vacância</dt><dd>${r.vac==null?'sem dado':f1(r.vac)+'%'}</dd>
-    <dt>Maior imóvel</dt><dd>${r.ci==null?'—':r.ci.toFixed(0)+'%'}</dd>`);
+  cards('t5f', top5F(d), r=>`<dt>Retorno total</dt><dd>${r.rt==null?'—':f1(r.rt)+'%'}</dd>
+    <dt>Distribuiu</dt><dd>${r.dyr==null?'—':f1(r.dyr)+'%'}</dd>
+    <dt>Patrimônio</dt><dd>${r.pat==null?'—':f1(r.pat)+'%'}</dd>
+    <dt>Do capital</dt><dd>${r.ero>0?f1(r.ero)+'%':'nada'}</dd>
+    <dt>Vacância</dt><dd>${r.vac==null?'sem dado':f1(r.vac)+'%'}</dd>`);
   document.getElementById('f1').textContent=d.length;
   document.getElementById('f1n').textContent=`de ${FIIS.length} com preço`;
   document.getElementById('f2').textContent=med(d.map(r=>r.pvp)).toFixed(3);
@@ -1079,8 +1092,12 @@ function renderF(){
   document.querySelector('#tf tbody').innerHTML=s.map(r=>{
     const vac = r.vac==null ? nd : `<span class="${r.vac>15?'neg':r.vac>5?'':'pos'}">${f1(r.vac)}</span>`;
     const ci  = r.ci==null  ? nd : `<span class="${r.ci>60?'neg':''}">${r.ci.toFixed(0)}%</span>`;
+    const num=(v,cls)=> v==null ? nd : `<span class="${cls||''}">${f1(v)}</span>`;
     return `<tr><td class="tk">${r.t}</td><td><span class="pill">${r.tp}</span></td><td>${f2(r.p)}</td>
-     <td>${f2(r.vp)}</td><td class="${r.pvp<1?'pos':''}">${r.pvp.toFixed(3)}</td><td>${f1(r.dy)}</td>
+     <td>${f2(r.vp)}</td><td class="${r.pvp<1?'pos':''}">${r.pvp.toFixed(3)}</td>
+     <td>${num(r.dyr)}</td><td>${num(r.pat, r.pat<0?'neg':'pos')}</td>
+     <td><b>${r.rt==null?nd:f1(r.rt)}</b></td>
+     <td>${r.ero>0?`<span class="neg">${f1(r.ero)}</span>`:'<span class="pos">0</span>'}</td>
      <td>${f1(r.tx)}</td><td>${vac}</td><td>${ci}</td><td>${r.ni==null?nd:r.ni}</td>
      <td>${f2(r.pl)}</td><td>${r.ct.toLocaleString('pt-BR')}</td></tr>`}).join('');
 }

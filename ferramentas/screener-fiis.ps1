@@ -64,6 +64,53 @@ if (Test-Path $fv) {
   Write-Warning "Sem dados de vacância. Rode ferramentas\cvm-fii-imoveis.ps1 primeiro."
 }
 
+# ---- Série mensal: o DY de um mês x 12 não descreve o fundo -------------------
+# Um mês com receita não recorrente infla o número inteiro. Com a série do
+# Informe Mensal dá para medir o que importa de verdade:
+#   1. quanto ele DISTRIBUIU de fato no período (composto, não extrapolado)
+#   2. quanto o PATRIMÔNIO por cota variou no mesmo período
+#   3. a soma dos dois, que é o retorno econômico real
+#   4. se parte da distribuição saiu do capital em vez do resultado
+#   5. o quanto a distribuição mensal oscila
+$SERIE = @{}
+$todasLinhas = Import-Csv "$dir\inf_mensal_fii_complemento_2026.csv" -Delimiter ';' -Encoding Default |
+               Where-Object { $_.Data_Referencia -le $REF }
+# $grpSerie, não $g: $g já é a hashtable do cadastro geral e o laço a
+# sobrescrevia, zerando a base inteira sem erro visível.
+foreach ($grpSerie in ($todasLinhas | Group-Object CNPJ_Fundo_Classe)) {
+  $rs = @($grpSerie.Group | Sort-Object Data_Referencia)
+  if ($rs.Count -lt 3) { continue }   # menos de 3 meses não sustenta média
+  $fdy = 1.0; $fpat = 1.0; $dys = @(); $n = 0
+  foreach ($r in $rs) {
+    $dy  = N $r.Percentual_Dividend_Yield_Mes
+    $pat = N $r.Percentual_Rentabilidade_Patrimonial_Mes
+    if ($null -ne $dy)  { $fdy  *= (1 + $dy);  $dys += $dy; $n++ }
+    if ($null -ne $pat) { $fpat *= (1 + $pat) }
+  }
+  if ($n -lt 3) { continue }
+  $dyAcum  = ($fdy  - 1) * 100
+  $patAcum = ($fpat - 1) * 100
+  # Anualiza pelo número de meses efetivamente observados.
+  $dyAno = ([Math]::Pow($fdy, 12.0/$n) - 1) * 100
+  # Retorno econômico: o que pingou na conta MAIS o que aconteceu com o
+  # patrimônio. Distribuição alta com patrimônio caindo não é retorno cheio.
+  $retTotal = (($fdy * $fpat) - 1) * 100
+  # Quando o patrimônio encolhe, essa fatia da distribuição veio do capital.
+  $erosao = if ($patAcum -lt 0 -and $dyAcum -gt 0) { [Math]::Min(100, (-$patAcum / $dyAcum) * 100) } else { 0 }
+  # Oscilação da distribuição mensal: quanto menor, mais previsível a renda.
+  $cv = $null
+  if ($dys.Count -ge 3) {
+    $m = ($dys | Measure-Object -Average).Average
+    if ($m -gt 0) {
+      $sd = [Math]::Sqrt((($dys | ForEach-Object { [Math]::Pow($_-$m,2) } | Measure-Object -Sum).Sum)/($dys.Count-1))
+      $cv = $sd/$m*100
+    }
+  }
+  $SERIE[$grpSerie.Name] = @{ meses=$n; dyAcum=$dyAcum; dyAno=$dyAno; patAcum=$patAcum
+                              retTotal=$retTotal; erosao=$erosao; cv=$cv }
+}
+Write-Host "Série mensal montada para $($SERIE.Count) fundos"
+
 $base = foreach ($c in (Import-Csv "$dir\inf_mensal_fii_complemento_2026.csv" -Delimiter ';' -Encoding Default | Where-Object { $_.Data_Referencia -eq $REF })) {
   $k = $c.CNPJ_Fundo_Classe; $gg = $g[$k]; $aa = $a[$k]
   if (-not $gg -or -not $aa) { continue }
@@ -101,6 +148,13 @@ $base = foreach ($c in (Import-Csv "$dir\inf_mensal_fii_complemento_2026.csv" -D
     InadImov  = if ($v) { NC $v.Inadimplencia } else { $null }
     ConcImovel= if ($v) { NC $v.ConcReceita } else { $null }
     CobVac    = if ($v) { NC $v.Cobertura } else { $null }
+    # Da série mensal — substituem o DY extrapolado de um mês só.
+    Meses     = if ($SERIE.ContainsKey($k)) { $SERIE[$k].meses }    else { $null }
+    DYreal    = if ($SERIE.ContainsKey($k)) { $SERIE[$k].dyAno }    else { $null }
+    PatAcum   = if ($SERIE.ContainsKey($k)) { $SERIE[$k].patAcum }  else { $null }
+    RetTotal  = if ($SERIE.ContainsKey($k)) { $SERIE[$k].retTotal } else { $null }
+    Erosao    = if ($SERIE.ContainsKey($k)) { $SERIE[$k].erosao }   else { $null }
+    DYcv      = if ($SERIE.ContainsKey($k)) { $SERIE[$k].cv }       else { $null }
   }
 }
 Write-Host "Fundos na base: $($base.Count)"
@@ -144,13 +198,13 @@ $ok = $res | Where-Object { $_.PVP -le $MaxPVP -and $_.DYano -ge $MinDY -and $_.
 "Filtros: segmento $Segmento · PL ≥ R$ {0:N0} · P/VP ≤ {1} · DY ano ≥ {2}%" -f $MinPL, $MaxPVP, $MinDY
 "Com preço: {0} · passaram: {1}" -f $res.Count, $ok.Count
 
-"`n{0,-9}{1,-9}{2,8}{3,8}{4,8}{5,8}{6,9}{7,8}{8,9}" -f "Ticker","Tipo","Preço","P/VP","DY ano","Taxa","Vac fís","Imóv","MaiorIm"
-$ok | Sort-Object PVP | Select-Object -First $Top | ForEach-Object {
+"`n{0,-9}{1,-8}{2,8}{3,8}{4,9}{5,10}{6,10}{7,9}{8,8}" -f "Ticker","Tipo","P/VP","DY real","Patrim.","Ret total","Do capital","Oscil.","Vac fís"
+$ok | Sort-Object { -$_.RetTotal } | Select-Object -First $Top | ForEach-Object {
   $vf = if ($null -ne $_.VacFisica) { "{0:P1}" -f $_.VacFisica } else { "—" }
-  $ci = if ($null -ne $_.ConcImovel) { "{0:P0}" -f $_.ConcImovel } else { "—" }
-  $ni = if ($_.NImoveis) { $_.NImoveis } else { "—" }
-  "{0,-9}{1,-9}{2,8:N2}{3,8:N3}{4,8:N1}{5,8:P1}{6,9}{7,8}{8,9}" -f `
-    $_.Ticker,$_.Tipo,$_.Preco,$_.PVP,$_.DYano,$_.TaxaAno,$vf,$ni,$ci
+  $f = { param($v,$suf) if ($null -ne $v) { "{0:N1}$suf" -f $v } else { "—" } }
+  "{0,-9}{1,-8}{2,8:N3}{3,9}{4,10}{5,11}{6,10}{7,9}{8,8}" -f `
+    $_.Ticker,$_.Tipo,$_.PVP,(& $f $_.DYreal '%'),(& $f $_.PatAcum '%'),(& $f $_.RetTotal '%'),
+    (& $f $_.Erosao '%'),(& $f $_.DYcv '%'),$vf
 }
 function Med($v) { $s=@($v|Sort-Object); if($s.Count -eq 0){0}else{$s[[int]($s.Count/2)]} }
 "`nMedianas -> P/VP {0:N3} · DY ano {1:N1}% · taxa {2:P2} · concentração {3:N2}" -f (Med $ok.PVP),(Med $ok.DYano),(Med $ok.TaxaAno),(Med $ok.Concentracao)
@@ -159,6 +213,15 @@ $out = "$Cache\screener_fiis.csv"
 $res | Export-Csv $out -NoTypeInformation -Encoding UTF8
 "Base salva: $out"
 
+"`n-- Como ler as colunas novas --"
+"  DY REAL é o distribuído no período, composto e anualizado — não um mês x 12."
+"  PATRIM. é a variação do valor patrimonial por cota no mesmo período."
+"  RET TOTAL soma os dois. É o retorno econômico: o que pingou na conta MAIS o"
+"  que aconteceu com o patrimônio que sustenta a renda."
+"  DO CAPITAL é a fatia da distribuição que saiu do patrimônio em vez do"
+"  resultado. Acima de zero significa que parte do rendimento é devolução do seu"
+"  próprio dinheiro — o DY parece bom e o patrimônio encolhe."
+"  OSCIL. mede a variação da distribuição mensal. Baixo = renda previsível."
 "`n-- Sobre a vacância --"
 "  Vem do Informe TRIMESTRAL da CVM (o mensal não tem), ponderada por área."
 "  '—' significa SEM DADO, não zero: FII de papel não tem imóvel, e parte dos"

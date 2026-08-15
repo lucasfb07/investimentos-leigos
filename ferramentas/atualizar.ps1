@@ -96,7 +96,14 @@ $jf = $fi | Sort-Object { P $_.PVP } | ForEach-Object {
     pvp=[math]::Round((P $_.PVP),3); dy=[math]::Round((P $_.DYano),1); tx=[math]::Round((P $_.TaxaAno)*100,2)
     cc=[math]::Round((P $_.Concentracao),2); ct=[int]$_.Cotistas; pl=[math]::Round((P $_.PL)/1e9,2)
     vac=(PN $_.VacFisica); vacf=(PN $_.VacFinan); inad=(PN $_.InadImov)
-    ci=(PN $_.ConcImovel); ni=$(if($_.NImoveis){[int]$_.NImoveis}else{$null}) } }
+    ci=(PN $_.ConcImovel); ni=$(if($_.NImoveis){[int]$_.NImoveis}else{$null})
+    # Da série mensal: substituem o DY extrapolado de um mês.
+    dyr=$(if($_.DYreal){[math]::Round((P $_.DYreal),1)}else{$null})
+    pat=$(if($_.PatAcum){[math]::Round((P $_.PatAcum),1)}else{$null})
+    rt =$(if($_.RetTotal){[math]::Round((P $_.RetTotal),1)}else{$null})
+    ero=$(if($_.Erosao){[math]::Round((P $_.Erosao),0)}else{0})
+    cv =$(if($_.DYcv){[math]::Round((P $_.DYcv),0)}else{$null})
+    mes=$(if($_.Meses){[int]$_.Meses}else{$null}) } }
 
 # --- Renda fixa: macro do BCB, Focus e Tesouro Direto ------------------------
 $UA = @{ "User-Agent" = "Mozilla/5.0" }
