@@ -80,14 +80,27 @@ $todasLinhas = Import-Csv "$dir\inf_mensal_fii_complemento_2026.csv" -Delimiter 
 foreach ($grpSerie in ($todasLinhas | Group-Object CNPJ_Fundo_Classe)) {
   $rs = @($grpSerie.Group | Sort-Object Data_Referencia)
   if ($rs.Count -lt 3) { continue }   # menos de 3 meses não sustenta média
-  $fdy = 1.0; $fpat = 1.0; $dys = @(); $n = 0
+  # ⚠️ A CVM tem linhas com erro de ESCALA: o ITRI11 reportou DY de 0,89 (89%)
+  # e patrimonial de 1,54 (154%) num mês em que os demais foram 0,009. São 63
+  # linhas assim em 7.655, afetando 43 fundos — pouco no total, mas compõe e
+  # produz retorno anualizado de 2.000%, jogando lixo para o topo do ranking.
+  # Distribuição mensal de FII acima de 5% já é extraordinária; acima disso é
+  # quase sempre erro de preenchimento. A linha suspeita é descartada, não o
+  # fundo inteiro.
+  $LIM_DY = 0.05; $LIM_PAT = 0.30
+  $fdy = 1.0; $fpat = 1.0; $dys = @(); $n = 0; $descartadas = 0
   foreach ($r in $rs) {
     $dy  = N $r.Percentual_Dividend_Yield_Mes
     $pat = N $r.Percentual_Rentabilidade_Patrimonial_Mes
-    if ($null -ne $dy)  { $fdy  *= (1 + $dy);  $dys += $dy; $n++ }
-    if ($null -ne $pat) { $fpat *= (1 + $pat) }
+    if ($null -ne $dy) {
+      if ($dy -lt 0 -or $dy -gt $LIM_DY) { $descartadas++ }
+      else { $fdy *= (1 + $dy); $dys += $dy; $n++ }
+    }
+    if ($null -ne $pat -and [Math]::Abs($pat) -le $LIM_PAT) { $fpat *= (1 + $pat) }
+    elseif ($null -ne $pat) { $descartadas++ }
   }
-  if ($n -lt 3) { continue }
+  # Com metade da série descartada não sobra base para média confiável.
+  if ($n -lt 3 -or $descartadas -gt $rs.Count) { continue }
   $dyAcum  = ($fdy  - 1) * 100
   $patAcum = ($fpat - 1) * 100
   # Anualiza pelo número de meses efetivamente observados.
@@ -219,6 +232,10 @@ function Med($v) { $s=@($v|Sort-Object); if($s.Count -eq 0){0}else{$s[[int]($s.C
 
 $out = "$Cache\screener_fiis.csv"
 $res | Export-Csv $out -NoTypeInformation -Encoding UTF8
+# Base COMPLETA da CVM, sem preço: ~1.000 fundos com retorno total, erosão,
+# oscilação e vacância calculados. O painel cruza isto com a planilha externa,
+# que traz o preço que a brapi não entrega em lote.
+$base | Export-Csv "$Cache\fiis_base_cvm.csv" -NoTypeInformation -Encoding UTF8
 "Base salva: $out"
 
 "`n-- Como ler as colunas novas --"

@@ -372,6 +372,7 @@ footer{margin-top:26px;font-size:12.5px;color:var(--dim);border-top:1px solid va
       <div class="f"><label>P/VP máx</label><input type="number" id="fpvp" value="1.1" step="0.05" oninput="renderF()"></div>
       <div class="f"><label>DY ano mín %</label><input type="number" id="fdy" value="0" step="1" oninput="renderF()"></div>
       <div class="f"><label>Taxa adm máx %</label><input type="number" id="ftx" value="2" step="0.1" oninput="renderF()"></div>
+      <div class="f"><label><abbr title="Fundo pequeno tem patrimônio volátil: uma reavaliação de um imóvel move o número inteiro, e anualizar seis meses disso produz retorno irreal. Subir o corte deixa só fundos com escala.">PL mín R$ mi</abbr></label><input type="number" id="fpl" value="500" step="100" oninput="renderF()"></div>
     </div>
   </div>
 
@@ -1096,7 +1097,14 @@ function bars(d){
 function filtF(){
   const tp=document.getElementById('ftp').value, pv=campoNum('fpvp',Infinity);
   const dy=campoNum('fdy',-Infinity), tx=campoNum('ftx',Infinity);
-  return FIIS.filter(r=>(!tp||r.tp===tp)&&r.pvp<=pv&&r.dy>=dy&&r.tx<=tx);
+  const pl=campoNum('fpl',0);
+  // Sem métrica da CVM o fundo entra na lista, mas não pode ser filtrado por
+  // um campo que ele não tem: taxa e DY ausentes não devem excluí-lo.
+  return FIIS.filter(r=> (!tp||r.tp===tp)
+    && r.pvp<=pv
+    && (r.dyr==null || r.dyr>=dy)
+    && (r.tx==null  || r.tx<=tx)
+    && (r.pl==null  || r.pl*1000>=pl));
 }
 function renderF(){
   const d=filtF();

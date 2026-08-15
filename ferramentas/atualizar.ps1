@@ -86,8 +86,43 @@ $ja = $ac | Sort-Object { -(P $_.EarningsYield) } | Select-Object -First 60 | Fo
     tri=$(if($_.TrimestreRef){([datetime]$_.TrimestreRef).ToString('MM/yy')}else{$null})
     vir=$(if($_.ViradaTri -eq 'True'){1}else{0}) } }
 
-$fi = Import-Csv "$Cache\screener_fiis.csv" -Encoding UTF8 | Where-Object {
-  $_.Preco -and (P $_.PVP) -ge 0.2 -and (P $_.PVP) -le 3 -and [int]$_.Cotistas -ge 500 }
+# --- FIIs: planilha externa dá a largura, CVM dá a profundidade --------------
+# A brapi só entrega preço 1 ticker por requisição, o que limitava o painel a
+# ~25 fundos. Se houver planilha importada, ela vira a fonte de preço e P/VP
+# para centenas de fundos, e as métricas calculadas da CVM (retorno total,
+# erosão, oscilação) enriquecem quem tiver série lá.
+$fi = @()
+$planilhaFii = "$Cache\fiis_planilha.csv"
+$baseCvm     = "$Cache\fiis_base_cvm.csv"
+if ((Test-Path $planilhaFii) -and (Test-Path $baseCvm)) {
+  $cvm = @{}
+  Import-Csv $baseCvm -Encoding UTF8 | ForEach-Object { if ($_.Ticker) { $cvm[$_.Ticker] = $_ } }
+  $fi = Import-Csv $planilhaFii -Encoding UTF8 | ForEach-Object {
+    $c = $cvm[$_.Ticker]
+    $pvp = P $_.PVP
+    if ($pvp -lt 0.2 -or $pvp -gt 3) { return }   # classe institucional ou erro
+    [pscustomobject]@{
+      Ticker=$_.Ticker; Preco=$_.Preco; PVP=$_.PVP; VPcota=$_.VPcota
+      PL=$_.PL; Cotistas=$(if($c){$c.Cotistas}else{0})
+      Tipo=$(if($c){$c.Tipo}else{'—'})
+      TaxaAno=$(if($c){$c.TaxaAno}else{$null})
+      # Vacância: prefere a da CVM (medida e auditada contra ocupação
+      # mal preenchida); cai para a da planilha quando a CVM não tem.
+      VacFisica=$(if($c -and $c.VacFisica){$c.VacFisica}elseif($_.Vacancia){(P $_.Vacancia)/100}else{$null})
+      NImoveis=$(if($c -and $c.NImoveis){$c.NImoveis}else{$_.NImoveis})
+      ConcImovel=$(if($c){$c.ConcImovel}else{$null})
+      Concentracao=$(if($c){$c.Concentracao}else{$null})
+      DYreal=$(if($c){$c.DYreal}else{$null}); PatAcum=$(if($c){$c.PatAcum}else{$null})
+      RetTotal=$(if($c){$c.RetTotal}else{$null}); Erosao=$(if($c){$c.Erosao}else{$null})
+      DYcv=$(if($c){$c.DYcv}else{$null})
+      TemCvm=$(if($c){1}else{0})
+    }
+  }
+  L "  FIIs: $($fi.Count) da planilha, $(@($fi|Where-Object{$_.TemCvm -eq 1}).Count) com métricas da CVM"
+} else {
+  $fi = Import-Csv "$Cache\screener_fiis.csv" -Encoding UTF8 | Where-Object {
+    $_.Preco -and (P $_.PVP) -ge 0.2 -and (P $_.PVP) -le 3 -and [int]$_.Cotistas -ge 500 }
+}
 # Vazio vira $null, nunca 0 — no painel aparece "—". Zero leria como "sem
 # vacância", que é uma afirmação que o dado não sustenta.
 function PN($v) { if ([string]::IsNullOrWhiteSpace($v)) { $null } else { [math]::Round((P $v)*100,1) } }
