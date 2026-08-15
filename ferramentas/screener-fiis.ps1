@@ -94,7 +94,10 @@ foreach ($grpSerie in ($todasLinhas | Group-Object CNPJ_Fundo_Classe)) {
   $dyAno = ([Math]::Pow($fdy, 12.0/$n) - 1) * 100
   # Retorno econômico: o que pingou na conta MAIS o que aconteceu com o
   # patrimônio. Distribuição alta com patrimônio caindo não é retorno cheio.
-  $retTotal = (($fdy * $fpat) - 1) * 100
+  # ANUALIZADO pelo mesmo critério do DY — misturar taxa anual com retorno de
+  # 6 meses na mesma tabela compara coisas de tamanhos diferentes.
+  $retTotal = ([Math]::Pow($fdy * $fpat, 12.0/$n) - 1) * 100
+  $patAno   = ([Math]::Pow($fpat, 12.0/$n) - 1) * 100
   # Quando o patrimônio encolhe, essa fatia da distribuição veio do capital.
   $erosao = if ($patAcum -lt 0 -and $dyAcum -gt 0) { [Math]::Min(100, (-$patAcum / $dyAcum) * 100) } else { 0 }
   # Oscilação da distribuição mensal: quanto menor, mais previsível a renda.
@@ -106,7 +109,10 @@ foreach ($grpSerie in ($todasLinhas | Group-Object CNPJ_Fundo_Classe)) {
       $cv = $sd/$m*100
     }
   }
-  $SERIE[$grpSerie.Name] = @{ meses=$n; dyAcum=$dyAcum; dyAno=$dyAno; patAcum=$patAcum
+  # patAcum fica no período (é variação de estoque, não taxa); patAno anualiza
+  # para poder somar com o DY na mesma unidade.
+  $SERIE[$grpSerie.Name] = @{ meses=$n; dyAcum=$dyAcum; dyAno=$dyAno
+                              patAcum=$patAcum; patAno=$patAno
                               retTotal=$retTotal; erosao=$erosao; cv=$cv }
 }
 Write-Host "Série mensal montada para $($SERIE.Count) fundos"
@@ -151,7 +157,9 @@ $base = foreach ($c in (Import-Csv "$dir\inf_mensal_fii_complemento_2026.csv" -D
     # Da série mensal — substituem o DY extrapolado de um mês só.
     Meses     = if ($SERIE.ContainsKey($k)) { $SERIE[$k].meses }    else { $null }
     DYreal    = if ($SERIE.ContainsKey($k)) { $SERIE[$k].dyAno }    else { $null }
-    PatAcum   = if ($SERIE.ContainsKey($k)) { $SERIE[$k].patAcum }  else { $null }
+    # Anualizado, para a linha fechar: DY + patrimônio ≈ retorno total.
+    PatAcum   = if ($SERIE.ContainsKey($k)) { $SERIE[$k].patAno }   else { $null }
+    PatPeriodo= if ($SERIE.ContainsKey($k)) { $SERIE[$k].patAcum }  else { $null }
     RetTotal  = if ($SERIE.ContainsKey($k)) { $SERIE[$k].retTotal } else { $null }
     Erosao    = if ($SERIE.ContainsKey($k)) { $SERIE[$k].erosao }   else { $null }
     DYcv      = if ($SERIE.ContainsKey($k)) { $SERIE[$k].cv }       else { $null }
@@ -214,10 +222,13 @@ $res | Export-Csv $out -NoTypeInformation -Encoding UTF8
 "Base salva: $out"
 
 "`n-- Como ler as colunas novas --"
+"  Todas as taxas estão ANUALIZADAS, para serem comparáveis entre si e com o CDI."
 "  DY REAL é o distribuído no período, composto e anualizado — não um mês x 12."
-"  PATRIM. é a variação do valor patrimonial por cota no mesmo período."
-"  RET TOTAL soma os dois. É o retorno econômico: o que pingou na conta MAIS o"
+"  PATRIM. é a variação do valor patrimonial por cota, também anualizada."
+"  RET TOTAL compõe os dois. É o retorno econômico: o que pingou na conta MAIS o"
 "  que aconteceu com o patrimônio que sustenta a renda."
+"  Compare RET TOTAL com o CDI. Um fundo que distribui acima do CDI mas rende"
+"  abaixo dele no total está devolvendo capital, não gerando retorno."
 "  DO CAPITAL é a fatia da distribuição que saiu do patrimônio em vez do"
 "  resultado. Acima de zero significa que parte do rendimento é devolução do seu"
 "  próprio dinheiro — o DY parece bom e o patrimônio encolhe."
